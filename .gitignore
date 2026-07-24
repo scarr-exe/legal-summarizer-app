@@ -1,0 +1,24 @@
+# --- Python / Django ---
+__pycache__/
+*.py[cod]
+*.sqlite3
+.env
+media/
+staticfiles/
+venv/
+.venv/
+
+# --- Node / Next.js ---
+node_modules/
+.next/
+out/
+.env.local
+
+# --- ML model cache (Hugging Face downloads locally, don't commit) ---
+.cache/
+*.bin
+*.safetensors
+
+# --- Editor / OS ---
+.vscode/
+.DS_Store

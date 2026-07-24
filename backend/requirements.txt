@@ -1,0 +1,25 @@
+# Core framework
+Django==5.0.6
+djangorestframework==3.15.1
+djangorestframework-simplejwt==5.3.1
+django-cors-headers==4.3.1
+
+# Database
+psycopg2-binary==2.9.9
+
+# Document extraction (Chapter 4, Section 4.3.2)
+PyPDF2==3.0.1
+python-docx==1.1.2
+
+# NLP pipeline (Chapter 4, Section 4.3.3)
+spacy==3.7.4
+transformers==4.41.2
+torch==2.3.1
+sentencepiece==0.2.0
+
+# Environment / utilities
+python-dotenv==1.0.1
+gunicorn==22.0.0
+
+# After installing, run:
+#   python -m spacy download en_core_web_sm
