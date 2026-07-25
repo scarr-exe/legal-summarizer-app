@@ -1,3 +1,8 @@
 from django.contrib import admin
+from .models import EvaluationLog
 
-# Register your models here.
+
+@admin.register(EvaluationLog)
+class EvaluationLogAdmin(admin.ModelAdmin):
+    list_display = ['user', 'document', 'rating', 'created_at']
+    list_filter = ['rating']
