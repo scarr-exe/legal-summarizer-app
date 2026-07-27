@@ -1,12 +1,7 @@
 """
-Views for the Document Upload and Extraction Subsystem (Chapter 4,
-Section 4.3.2) plus the list/detail endpoints that Section 4.4.5
-describes as the system's structured output.
-
-Note: this phase stops at extraction. Document.status goes from
-'uploaded' to 'processing' here, but nothing yet moves it to 'complete' —
-that transition happens in Phase 3 once clause identification and
-summarization actually run.
+Full views.py for Phase 3 — this REPLACES the Phase 2 version. It adds
+one new view (DocumentProcessView) and leaves the upload/list/detail
+views from Phase 2 unchanged.
 """
 
 from rest_framework import generics, status
@@ -15,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from django.conf import settings
+from django.shortcuts import get_object_or_404
 
 from .models import Document
 from .serializers import (
@@ -28,16 +24,11 @@ from .extraction import (
     UnsupportedFileTypeError,
     ExtractionError,
 )
+from .pipeline import process_document, ProcessingError
 
 
 class DocumentUploadView(APIView):
-    """
-    POST /api/documents/upload/
-
-    Accepts a single contract file (PDF or DOCX), validates it, extracts
-    its raw text, and stores both the file and the extracted text. Does
-    NOT run clause identification or summarization — that's Phase 3.
-    """
+    """POST /api/documents/upload/ — unchanged from Phase 2."""
 
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser]
@@ -50,7 +41,6 @@ class DocumentUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Validate type and size (Chapter 4, Section 4.4.5)
         try:
             file_type = validate_file(
                 uploaded_file.name,
@@ -62,9 +52,6 @@ class DocumentUploadView(APIView):
         except ValueError as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Create the Document row first so we have something to attach
-        # extracted text to, and so a failed extraction still leaves a
-        # record the user (and you, debugging) can see in /admin/.
         document = Document.objects.create(
             user=request.user,
             file=uploaded_file,
@@ -73,9 +60,8 @@ class DocumentUploadView(APIView):
             status=Document.Status.PROCESSING,
         )
 
-        # Extract text (Chapter 4, Section 4.3.2)
         try:
-            uploaded_file.seek(0)  # validate_file may have read from it
+            uploaded_file.seek(0)
             extracted = extract_text(uploaded_file, file_type)
         except ExtractionError as e:
             document.status = Document.Status.FAILED
@@ -86,17 +72,40 @@ class DocumentUploadView(APIView):
             )
 
         document.extracted_text = extracted
-        # Deliberately left as PROCESSING, not COMPLETE — Phase 3 sets
-        # COMPLETE once clauses and summaries actually exist for this
-        # document. Right now only extraction has happened.
         document.save()
 
         serializer = DocumentUploadSerializer(document)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
+class DocumentProcessView(APIView):
+    """
+    POST /api/documents/{id}/process/
+
+    Runs clause identification + summarization (Chapter 4, Section
+    4.3.3) on a document that has already been uploaded and extracted.
+    Separated from upload on purpose: extraction is fast, NLP processing
+    is slow (the summarization model can take several seconds per
+    clause on a CPU), so keeping them as two requests means the upload
+    response doesn't hang waiting for the whole pipeline to finish.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        document = get_object_or_404(Document, pk=pk, user=request.user)
+
+        try:
+            process_document(document)
+        except ProcessingError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = DocumentDetailSerializer(document)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class DocumentListView(generics.ListAPIView):
-    """GET /api/documents/ — the Dashboard's Summary History panel (4.2)."""
+    """GET /api/documents/ — unchanged from Phase 2."""
 
     serializer_class = DocumentListSerializer
     permission_classes = [IsAuthenticated]
@@ -109,8 +118,9 @@ class DocumentDetailView(generics.RetrieveAPIView):
     """
     GET /api/documents/{id}/summary/
 
-    Returns clauses too, but until Phase 3 runs, clauses will always be
-    an empty list for any document — that's expected at this stage.
+    Now returns real populated clauses after DocumentProcessView has
+    been called for that document — unchanged code from Phase 2, but
+    the output is no longer an empty list once Phase 3 has run.
     """
 
     serializer_class = DocumentDetailSerializer
