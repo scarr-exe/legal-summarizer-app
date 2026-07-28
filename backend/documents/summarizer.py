@@ -53,6 +53,9 @@ def summarize_text(text: str, max_length: int = 60, min_length: int = 15) -> str
 
     # distilbart has a ~1024 token input limit; truncate defensively so
     # a single unusually long clause doesn't crash the whole request.
+    # truncation=True below is the real safety net (it truncates at the
+    # tokenizer level, which is what actually matters); the char slice
+    # here just avoids handing the tokenizer an enormous string first.
     truncated = text[:3000]
 
     # Scale max_length down for shorter clauses so the model isn't
@@ -60,10 +63,19 @@ def summarize_text(text: str, max_length: int = 60, min_length: int = 15) -> str
     effective_max = min(max_length, max(min_length + 10, word_count // 2))
 
     summarizer = get_summarizer()
-    result = summarizer(
-        truncated,
-        max_length=effective_max,
-        min_length=min_length,
-        do_sample=False,
-    )
-    return result[0]['summary_text'].strip()
+    try:
+        result = summarizer(
+            truncated,
+            max_length=effective_max,
+            min_length=min_length,
+            do_sample=False,
+            truncation=True,
+        )
+        return result[0]['summary_text'].strip()
+    except Exception:
+        # A single clause failing the model (OOM, unexpected tokenizer
+        # error, etc.) shouldn't take down the whole document's
+        # processing — fall back to the original text, consistent with
+        # the "unsummarized passthrough over fabricated content" stance
+        # already taken above for short clauses.
+        return text

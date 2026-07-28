@@ -24,6 +24,19 @@ sample tenancy agreement:
         keywords it matches, and pick the highest-scoring category
         rather than the first one that matches at all.
 
+3. Keyword matching now uses word-boundary regex instead of plain
+   substring checks. Substring matching meant short keywords matched
+   inside unrelated words — e.g. the payment keyword 'rent' matched
+   inside "cur-rent" and "diffe-rent", and the confidentiality keyword
+   'nda' matched inside "age-nda". A clause about "the current terms of
+   this agenda item" had nothing to do with payment or confidentiality
+   but scored points for both. Word-boundary matching (`\\bkeyword\\b`)
+   only matches whole words/phrases, which eliminates this entire class
+   of false positive. Also dropped the generic duration keyword 'period
+   of', which collided with the termination keyword 'notice period' —
+   any termination clause mentioning "notice period of 30 days" was
+   phantom-scoring a duration point too.
+
 Still rule-based, not a trained classifier — that scope decision is
 unchanged. This is a better rule, not a different approach.
 """
@@ -49,7 +62,7 @@ def get_nlp():
 CLAUSE_KEYWORDS = {
     'duration': [
         'term of this agreement', 'term of tenancy', 'commence', 'commencement',
-        'shall continue for', 'period of', 'calendar months', 'duration of',
+        'shall continue for', 'calendar months', 'duration of this agreement',
     ],
     'termination': [
         'terminate this agreement', 'termination of this agreement',
@@ -57,7 +70,7 @@ CLAUSE_KEYWORDS = {
         'terminate immediately',
     ],
     'payment': [
-        'rent', 'deposit', 'salary', 'wage', 'payment', 'fee', 'invoice',
+        'rent', 'rental', 'deposit', 'salary', 'wage', 'payment', 'fee', 'invoice',
         'due monthly', 'due date', 'late payment', 'non-refundable',
     ],
     'confidentiality': [
@@ -80,6 +93,19 @@ HEADING_NAMES = {
     'confidentiality': ['confidentiality', 'non-disclosure'],
     'renewal': ['renewal'],
 }
+
+
+def _compile_word_boundary_patterns(keyword_map: dict) -> dict:
+    """Compiles each keyword/phrase into a \\bphrase\\b regex so matching
+    only fires on whole words, not substrings inside unrelated words."""
+    return {
+        clause_type: [re.compile(r'\b' + re.escape(kw) + r'\b') for kw in keywords]
+        for clause_type, keywords in keyword_map.items()
+    }
+
+
+_CLAUSE_KEYWORD_PATTERNS = _compile_word_boundary_patterns(CLAUSE_KEYWORDS)
+_HEADING_PATTERNS = _compile_word_boundary_patterns(HEADING_NAMES)
 
 
 def _split_into_chunks(text: str) -> list[str]:
@@ -118,8 +144,8 @@ def _heading_match(chunk: str) -> str | None:
     clause_type, or None if no heading is recognized.
     """
     first_words = ' '.join(chunk.split()[:8]).lower()
-    for clause_type, headings in HEADING_NAMES.items():
-        if any(heading in first_words for heading in headings):
+    for clause_type, patterns in _HEADING_PATTERNS.items():
+        if any(p.search(first_words) for p in patterns):
             return clause_type
     return None
 
@@ -131,8 +157,8 @@ def _classify_chunk(chunk: str) -> str:
 
     lower = chunk.lower()
     scores = {}
-    for clause_type, keywords in CLAUSE_KEYWORDS.items():
-        matches = sum(1 for kw in keywords if kw in lower)
+    for clause_type, patterns in _CLAUSE_KEYWORD_PATTERNS.items():
+        matches = sum(1 for p in patterns if p.search(lower))
         if matches:
             scores[clause_type] = matches
 
