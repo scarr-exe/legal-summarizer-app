@@ -1,45 +1,65 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import Logo from './Logo';
 
 export default function NavBar() {
   const { user, isLoading, logout } = useAuth();
+  const pathname = usePathname();
+
+  const navLink = (href: string, label: string) => {
+    const active = pathname === href;
+    return (
+      <Link
+        href={href}
+        className={`relative rounded-lg px-3 py-1.5 transition-colors ${
+          active
+            ? 'text-[var(--foreground)]'
+            : 'text-[var(--muted)] hover:text-[var(--foreground)]'
+        }`}
+      >
+        {label}
+        {active && (
+          <span className="absolute inset-x-3 -bottom-px h-px bg-[var(--accent)]" />
+        )}
+      </Link>
+    );
+  };
 
   return (
-    <header className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-black">
-      <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-        <Link href="/" className="font-semibold text-zinc-900 dark:text-zinc-50">
-          Legal Doc Summarizer
+    <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--background)]/80 backdrop-blur-xl">
+      <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
+        <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
+          <Logo />
+          <span className="font-semibold tracking-tight">Clarity</span>
         </Link>
 
-        <div className="flex items-center gap-4 text-sm">
-          {isLoading ? null : user ? (
+        <div className="flex items-center gap-1 text-sm">
+          {isLoading ? (
+            <div className="h-8 w-40 animate-pulse rounded-lg bg-[var(--surface-muted)]" />
+          ) : user ? (
             <>
-              <Link href="/dashboard" className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50">
-                Dashboard
-              </Link>
-              <Link href="/upload" className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50">
-                Upload
-              </Link>
-              <span className="text-zinc-400 dark:text-zinc-600">{user.username}</span>
+              {navLink('/dashboard', 'Dashboard')}
+              {navLink('/upload', 'Upload')}
+              <span className="mx-2 hidden h-4 w-px bg-[var(--border)] sm:block" />
+              <span className="hidden text-[var(--muted)] sm:block">{user.username}</span>
               <button
                 onClick={logout}
-                className="rounded-full border border-zinc-300 px-3 py-1 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                className="ml-2 rounded-lg border border-[var(--border)] px-3 py-1.5 text-[var(--muted)] transition-colors hover:border-[var(--muted)] hover:text-[var(--foreground)]"
               >
                 Log out
               </button>
             </>
           ) : (
             <>
-              <Link href="/login" className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50">
-                Log in
-              </Link>
+              {navLink('/login', 'Log in')}
               <Link
                 href="/register"
-                className="rounded-full bg-zinc-900 px-3 py-1 text-white hover:bg-zinc-700 dark:bg-zinc-50 dark:text-black dark:hover:bg-zinc-300"
+                className="ml-1 rounded-lg bg-[var(--foreground)] px-4 py-1.5 font-medium text-[var(--background)] transition-transform hover:scale-[1.03] active:scale-95"
               >
-                Register
+                Get started
               </Link>
             </>
           )}

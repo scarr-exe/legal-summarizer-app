@@ -1,14 +1,24 @@
 'use client';
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ResponsiveContainer } from 'recharts';
 import type { Clause } from '@/lib/api';
 
-const CLAUSE_TYPE_LABELS: Record<Clause['clause_type'], string> = {
+const CLAUSE_TYPE_LABELS: Record<string, string> = {
   payment: 'Payment',
   termination: 'Termination',
   confidentiality: 'Confidentiality',
   renewal: 'Renewal',
+  duration: 'Duration',
   other: 'Other',
+};
+
+const COLORS: Record<string, string> = {
+  Payment: '#10b981',
+  Termination: '#f43f5e',
+  Confidentiality: '#3b82f6',
+  Renewal: '#8b5cf6',
+  Duration: '#f59e0b',
+  Other: '#94a3b8',
 };
 
 export default function ClauseTypeChart({ clauses }: { clauses: Clause[] }) {
@@ -17,17 +27,44 @@ export default function ClauseTypeChart({ clauses }: { clauses: Clause[] }) {
     const label = CLAUSE_TYPE_LABELS[clause.clause_type] ?? clause.clause_type;
     counts.set(label, (counts.get(label) ?? 0) + 1);
   }
-  const data = Array.from(counts, ([type, count]) => ({ type, count }));
+  const data = Array.from(counts, ([type, count]) => ({ type, count })).sort(
+    (a, b) => b.count - a.count
+  );
 
   return (
-    <div className="h-64 w-full">
+    <div className="h-[260px] w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} layout="vertical" margin={{ left: 16, right: 16 }}>
-          <CartesianGrid strokeDasharray="3 3" className="stroke-zinc-200 dark:stroke-zinc-800" />
-          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
-          <YAxis type="category" dataKey="type" width={110} tick={{ fontSize: 12 }} />
-          <Tooltip />
-          <Bar dataKey="count" fill="#3f3f46" radius={[0, 4, 4, 0]} />
+        <BarChart data={data} layout="vertical" margin={{ left: 8, right: 24, top: 4, bottom: 4 }}>
+          <CartesianGrid horizontal={false} stroke="var(--border)" />
+          <XAxis
+            type="number"
+            allowDecimals={false}
+            tick={{ fontSize: 12, fill: 'var(--muted)' }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis
+            type="category"
+            dataKey="type"
+            width={110}
+            tick={{ fontSize: 12, fill: 'var(--muted)' }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <Tooltip
+            cursor={{ fill: 'var(--surface-muted)' }}
+            contentStyle={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 10,
+              fontSize: 13,
+            }}
+          />
+          <Bar dataKey="count" radius={[0, 6, 6, 0]} animationDuration={900}>
+            {data.map((entry) => (
+              <Cell key={entry.type} fill={COLORS[entry.type] ?? COLORS.Other} />
+            ))}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>

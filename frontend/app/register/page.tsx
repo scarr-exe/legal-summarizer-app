@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
+import AuthShell from '@/components/AuthShell';
+import Field from '@/components/Field';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -30,72 +32,43 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-sm flex-col gap-6 px-6 py-16">
-      <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Register</h1>
-
+    <AuthShell
+      title="Create your account"
+      subtitle="Start turning contracts into plain English."
+      footer={
+        <>
+          Already have an account?{' '}
+          <Link href="/login" className="font-medium text-[var(--accent)] hover:underline">
+            Log in
+          </Link>
+        </>
+      }
+    >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <label htmlFor="username" className="text-sm text-zinc-600 dark:text-zinc-400">
-            Username
-          </label>
-          <input
-            id="username"
-            name="username"
-            required
-            autoFocus
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-          />
-        </div>
+        <Field id="username" label="Username" value={username} onChange={setUsername} autoFocus />
+        <Field id="email" label="Email" type="email" value={email} onChange={setEmail} />
+        <Field
+          id="password"
+          label="Password"
+          type="password"
+          value={password}
+          onChange={setPassword}
+        />
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor="email" className="text-sm text-zinc-600 dark:text-zinc-400">
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor="password" className="text-sm text-zinc-600 dark:text-zinc-400">
-            Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-          />
-        </div>
-
-        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {error && (
+          <p className="animate-fade rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+            {error}
+          </p>
+        )}
 
         <button
           type="submit"
           disabled={pending}
-          className="rounded-full bg-zinc-900 px-4 py-2 text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-50 dark:text-black dark:hover:bg-zinc-300"
+          className="mt-1 rounded-lg bg-[var(--foreground)] px-4 py-2.5 text-sm font-medium text-[var(--background)] transition-all hover:opacity-90 disabled:opacity-50"
         >
           {pending ? 'Creating account…' : 'Create account'}
         </button>
       </form>
-
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
-        Already have an account?{' '}
-        <Link href="/login" className="font-medium text-zinc-900 underline dark:text-zinc-50">
-          Log in
-        </Link>
-      </p>
-    </div>
+    </AuthShell>
   );
 }

@@ -66,35 +66,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push('/login');
   }, [router]);
 
-  const scheduleRefresh = useCallback(
-    (access: string) => {
-      clearRefreshTimer();
-      const expiryMs = api.getTokenExpiryMs(access);
-      if (!expiryMs) return;
-      const delay = Math.max(expiryMs - Date.now() - REFRESH_MARGIN_MS, 5_000);
-      timerRef.current = setTimeout(async () => {
-        const refresh = refreshRef.current;
-        if (!refresh) return;
-        try {
-          const newAccess = await api.refreshAccessToken(refresh);
-          applyTokens(newAccess, refresh);
-        } catch {
-          logout();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, delay);
-    },
-    [logout]
-  );
+  // applyTokens re-arms the refresh timer, and the timer's callback needs
+  // to call applyTokens again for the *next* cycle. These refs break that
+  // cycle without a stale closure — a direct mutual reference between two
+  // useCallbacks would leave one capturing an outdated version of the other.
+  const applyTokensRef = useRef<((access: string, refresh: string) => void) | null>(null);
+  const logoutRef = useRef(logout);
 
-  const applyTokens = useCallback(
-    (access: string, refresh: string) => {
-      accessRef.current = access;
-      refreshRef.current = refresh;
-      scheduleRefresh(access);
-    },
-    [scheduleRefresh]
-  );
+  const applyTokens = useCallback((access: string, refresh: string) => {
+    accessRef.current = access;
+    refreshRef.current = refresh;
+
+    clearRefreshTimer();
+    const expiryMs = api.getTokenExpiryMs(access);
+    if (!expiryMs) return;
+
+    const delay = Math.max(expiryMs - Date.now() - REFRESH_MARGIN_MS, 5_000);
+    timerRef.current = setTimeout(async () => {
+      const currentRefresh = refreshRef.current;
+      if (!currentRefresh) return;
+      try {
+        const newAccess = await api.refreshAccessToken(currentRefresh);
+        // Persist the rotated access token — without this, a reload after a
+        // silent refresh would rehydrate from a stale token in localStorage.
+        const session = api.getStoredSession();
+        api.storeSession({ access: newAccess, refresh: currentRefresh }, session?.username ?? '');
+        applyTokensRef.current?.(newAccess, currentRefresh);
+      } catch {
+        logoutRef.current();
+      }
+    }, delay);
+  }, []);
+
+  useEffect(() => {
+    applyTokensRef.current = applyTokens;
+    logoutRef.current = logout;
+  }, [applyTokens, logout]);
 
   useEffect(() => {
     const session = api.getStoredSession();
