@@ -2,12 +2,18 @@
 Text extraction service for the Document Upload and Extraction Subsystem
 (Chapter 4, Section 4.3.2).
 
-Kept as a standalone module (rather than inline in views.py) so Phase 3
-can import extract_text() directly without touching the view layer —
-matches the module boundary implied by the System Architecture Diagram
-in Chapter 3, Figure 3.3.
+CHANGE FROM PHASE 2: added _normalize_whitespace(). Some PDFs (depending
+on how they were generated/encoded) cause PyPDF2 to insert a newline
+after every single word instead of a normal space — e.g.
+"RENT\n \nAND\n \nPAYMENT" instead of "RENT AND PAYMENT". Left unfixed,
+this corrupts both clause classification (multi-word keyword phrases
+never match) and summarization quality (the model sees broken
+tokenization and produces garbled/hallucinated output). Normalizing
+here, once, at the extraction boundary, means every downstream module
+(clause_matcher, summarizer) can assume clean text.
 """
 
+import re
 import PyPDF2
 import docx
 
@@ -22,6 +28,29 @@ class ExtractionError(Exception):
     pass
 
 
+def _normalize_whitespace(text: str) -> str:
+    """
+    Collapses runs of whitespace (including the word-per-line pattern
+    some PDFs produce) down to single spaces, while still preserving
+    paragraph breaks (blank lines) and numbered-clause line breaks,
+    since clause_matcher's chunking relies on those.
+    """
+    # Preserve intentional paragraph breaks (two+ newlines) and numbered
+    # clause breaks ("\n1. ", "\n2. ") by protecting them first.
+    text = re.sub(r'\n\s*\n+', '\u0000PARA\u0000', text)
+    text = re.sub(r'\n(\s*\d{1,2}[\.\)]\s+)', '\u0000NUM\u0000\\1', text)
+
+    # Collapse every remaining run of whitespace (the word-per-line
+    # corruption) into a single space.
+    text = re.sub(r'\s+', ' ', text)
+
+    # Restore the protected breaks.
+    text = text.replace('\u0000PARA\u0000', '\n\n')
+    text = text.replace('\u0000NUM\u0000', '\n')
+
+    return text.strip()
+
+
 def extract_text(file_obj, file_type: str) -> str:
     """
     Extract raw text from an uploaded contract file.
@@ -31,7 +60,7 @@ def extract_text(file_obj, file_type: str) -> str:
         file_type: 'pdf' or 'docx' (matches Document.FileType choices)
 
     Returns:
-        Extracted plain text as a single string.
+        Extracted, whitespace-normalized plain text.
 
     Raises:
         UnsupportedFileTypeError: if file_type isn't 'pdf' or 'docx'
@@ -49,7 +78,8 @@ def extract_text(file_obj, file_type: str) -> str:
             'No extractable text found. The file may be a scanned image '
             'with no text layer, which this system does not OCR.'
         )
-    return text.strip()
+
+    return _normalize_whitespace(text)
 
 
 def _extract_from_pdf(file_obj) -> str:
