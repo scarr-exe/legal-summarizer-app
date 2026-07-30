@@ -11,6 +11,18 @@ never match) and summarization quality (the model sees broken
 tokenization and produces garbled/hallucinated output). Normalizing
 here, once, at the extraction boundary, means every downstream module
 (clause_matcher, summarizer) can assume clean text.
+
+FOLLOW-UP FIX, from a real test upload: the first version of
+_normalize_whitespace() assumed "two or more newlines" always meant a
+genuine paragraph break, worth preserving as \n\n. That assumption broke
+on a real PDF where PyPDF2 put a BLANK LINE between every single word
+("TENANCY\n\nAGREEMENT\n\nThis\n\nTenancy...") — every one of those blank
+lines got preserved as if it were a real paragraph break, so the
+corruption passed straight through untouched. _looks_like_word_per_line()
+below detects this case (many blank-line-separated segments that are
+each only one or two words) and switches to a more aggressive collapse
+that doesn't trust blank lines at all, while still preserving numbered
+clause markers so clause_matcher can still segment the document.
 """
 
 import re
@@ -28,24 +40,49 @@ class ExtractionError(Exception):
     pass
 
 
+def _looks_like_word_per_line(text: str) -> bool:
+    """
+    Detects PDFs where PyPDF2 has put a blank line between every single
+    word, rather than genuine paragraph breaks. A real paragraph is
+    normally at least a full sentence (10+ words); if most blank-line
+    separated segments are only one or two words long, and there are
+    enough of them to rule out coincidence (a short heading, say), the
+    blank lines aren't paragraph breaks at all.
+    """
+    segments = [s for s in re.split(r'\n\s*\n+', text) if s.strip()]
+    if len(segments) <= 20:
+        return False
+    avg_words = sum(len(s.split()) for s in segments) / len(segments)
+    return avg_words < 4
+
+
 def _normalize_whitespace(text: str) -> str:
     """
     Collapses runs of whitespace (including the word-per-line pattern
     some PDFs produce) down to single spaces, while still preserving
-    paragraph breaks (blank lines) and numbered-clause line breaks,
-    since clause_matcher's chunking relies on those.
+    numbered-clause line breaks, since clause_matcher's chunking relies
+    on those. Genuine paragraph breaks (blank lines) are preserved too --
+    unless the text looks like the word-per-line corruption case (see
+    _looks_like_word_per_line), where blank lines carry no real
+    structure and get collapsed like any other whitespace instead.
     """
-    # Preserve intentional paragraph breaks (two+ newlines) and numbered
-    # clause breaks ("\n1. ", "\n2. ") by protecting them first.
-    text = re.sub(r'\n\s*\n+', '\u0000PARA\u0000', text)
+    word_per_line = _looks_like_word_per_line(text)
+
+    # Numbered clause breaks ("\n1. ", "\n2. ") are always worth keeping,
+    # corrupted or not -- protect them first either way.
     text = re.sub(r'\n(\s*\d{1,2}[\.\)]\s+)', '\u0000NUM\u0000\\1', text)
 
+    if not word_per_line:
+        # Preserve intentional paragraph breaks (two+ newlines).
+        text = re.sub(r'\n\s*\n+', '\u0000PARA\u0000', text)
+
     # Collapse every remaining run of whitespace (the word-per-line
-    # corruption) into a single space.
+    # corruption, or just normal line wrapping) into a single space.
     text = re.sub(r'\s+', ' ', text)
 
     # Restore the protected breaks.
-    text = text.replace('\u0000PARA\u0000', '\n\n')
+    if not word_per_line:
+        text = text.replace('\u0000PARA\u0000', '\n\n')
     text = text.replace('\u0000NUM\u0000', '\n')
 
     return text.strip()
