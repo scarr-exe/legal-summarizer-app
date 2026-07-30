@@ -1,26 +1,34 @@
 @import "tailwindcss";
 
+/* Ink & amber.
+   Warm-tinted neutrals (stone, not cool grey) with a single deep amber
+   accent. Chosen over the previous blue/violet scheme because the
+   gradient-purple look reads generic; amber also stays clear of the
+   semantic clause colours (payment green, termination red,
+   confidentiality blue), so the accent never competes with meaning. */
 :root {
   --background: #ffffff;
-  --foreground: #0b0d12;
+  --foreground: #1c1917;
   --surface: #ffffff;
-  --surface-muted: #f7f8fa;
-  --border: #e6e8ec;
-  --muted: #626977;
-  --accent: #2f5cff;
-  --accent-soft: #eaefff;
+  --surface-muted: #faf9f7;
+  --border: #e7e3dd;
+  --muted: #78716c;
+  --accent: #b45309;
+  --accent-soft: #fdf6ec;
+  --accent-line: #e9d9c1;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #07080c;
-    --foreground: #f2f4f8;
-    --surface: #0e1016;
-    --surface-muted: #12151d;
-    --border: #232733;
-    --muted: #9aa2b3;
-    --accent: #7d9bff;
-    --accent-soft: #161c2e;
+    --background: #0c0a09;
+    --foreground: #f5f3f0;
+    --surface: #16130f;
+    --surface-muted: #1a1613;
+    --border: #2c2723;
+    --muted: #a8a29e;
+    --accent: #e0a355;
+    --accent-soft: #221a11;
+    --accent-line: #3a2d1d;
   }
 }
 
@@ -115,19 +123,37 @@ body {
   transform: none;
 }
 
-/* Ambient blurred blobs behind the hero. */
+/* Ambient warm wash behind the hero. Deliberately much subtler than a
+   saturated gradient blob — it should read as paper warmth, not as a
+   colour splash. */
 .blob {
   position: absolute;
   border-radius: 9999px;
-  filter: blur(80px);
-  opacity: 0.5;
-  animation: drift 14s ease-in-out infinite;
+  filter: blur(90px);
+  opacity: 0.14;
+  animation: drift 16s ease-in-out infinite;
 }
 
 @media (prefers-color-scheme: dark) {
   .blob {
-    opacity: 0.32;
+    opacity: 0.13;
   }
+}
+
+/* Confirm-dialog entrance. */
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-dialog {
+  animation: dialog-in 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* Subtle shine that travels across the product mockup once on load. */
@@ -168,6 +194,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .animate-rise,
   .animate-fade,
+  .animate-dialog,
   .blob,
   .shine::after {
     animation: none !important;

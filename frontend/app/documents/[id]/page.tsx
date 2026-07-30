@@ -2,35 +2,23 @@
 
 import { use, useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useRequireAuth } from '@/lib/auth-context';
-import { getDocument, DocumentDetail, ApiError } from '@/lib/api';
+import { getDocument, deleteDocument, DocumentDetail, ApiError } from '@/lib/api';
+import { labelFor, toneFor, sortClausesForDisplay } from '@/lib/clause-types';
 import StatusBadge from '@/components/StatusBadge';
 import ClauseTypeChart from '@/components/ClauseTypeChart';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import Reveal from '@/components/Reveal';
-
-const CLAUSE_TYPE_LABELS: Record<string, string> = {
-  payment: 'Payment',
-  termination: 'Termination',
-  confidentiality: 'Confidentiality',
-  renewal: 'Renewal',
-  duration: 'Duration',
-  other: 'Other',
-};
-
-const CLAUSE_TYPE_TONES: Record<string, string> = {
-  payment: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  termination: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
-  confidentiality: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-  renewal: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
-  duration: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  other: 'bg-slate-500/10 text-slate-600 dark:text-slate-400',
-};
 
 export default function DocumentSummaryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user, isLoading: authLoading, getValidAccessToken } = useRequireAuth();
+  const router = useRouter();
   const [doc, setDoc] = useState<DocumentDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -47,15 +35,31 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
     if (user) load();
   }, [user, load]);
 
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      const token = await getValidAccessToken();
+      await deleteDocument(id, token);
+      router.push('/dashboard');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not delete this document.');
+      setDeleting(false);
+      setConfirmOpen(false);
+    }
+  }
+
   if (authLoading || !user) return null;
 
-  if (error) {
+  if (error && !doc) {
     return (
       <div className="mx-auto max-w-3xl px-6 py-16">
         <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
           {error}
         </p>
-        <Link href="/dashboard" className="mt-4 inline-block text-sm text-[var(--accent)] hover:underline">
+        <Link
+          href="/dashboard"
+          className="mt-4 inline-block text-sm text-[var(--accent)] hover:underline"
+        >
           ← Back to dashboard
         </Link>
       </div>
@@ -64,16 +68,18 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
 
   if (!doc) {
     return (
-      <div className="mx-auto max-w-3xl space-y-3 px-6 py-16">
+      <div className="mx-auto max-w-7xl space-y-3 px-6 py-16">
         <div className="h-8 w-64 animate-pulse rounded-lg bg-[var(--surface-muted)]" />
-        <div className="h-[260px] animate-pulse rounded-2xl bg-[var(--surface-muted)]" />
+        <div className="h-56 animate-pulse rounded-2xl bg-[var(--surface-muted)]" />
         <div className="h-40 animate-pulse rounded-2xl bg-[var(--surface-muted)]" />
       </div>
     );
   }
 
+  const orderedClauses = sortClausesForDisplay(doc.clauses);
+
   return (
-    <div className="mx-auto max-w-3xl px-6 py-12">
+    <div className="mx-auto max-w-7xl px-6 py-10">
       <div className="animate-rise">
         <Link
           href="/dashboard"
@@ -94,9 +100,23 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
               })}
             </p>
           </div>
-          <StatusBadge status={doc.status} />
+          <div className="flex items-center gap-3">
+            <StatusBadge status={doc.status} />
+            <button
+              onClick={() => setConfirmOpen(true)}
+              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--muted)] transition-colors hover:border-red-400 hover:text-red-600 dark:hover:text-red-400"
+            >
+              Delete
+            </button>
+          </div>
         </div>
       </div>
+
+      {error && (
+        <p className="mt-4 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+          {error}
+        </p>
+      )}
 
       {doc.status !== 'complete' ? (
         <p className="mt-10 rounded-xl border border-dashed border-[var(--border)] px-6 py-10 text-center text-sm text-[var(--muted)]">
@@ -105,9 +125,9 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
       ) : (
         <>
           {doc.clauses.length > 0 && (
-            <Reveal className="mt-10">
-              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
-                <h2 className="mb-4 text-sm font-medium text-[var(--muted)]">
+            <Reveal className="mt-8">
+              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+                <h2 className="mb-1 text-sm font-medium uppercase tracking-wider text-[var(--muted)]">
                   Clause-type distribution
                 </h2>
                 <ClauseTypeChart clauses={doc.clauses} />
@@ -115,24 +135,27 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
             </Reveal>
           )}
 
-          <section className="mt-8 flex flex-col gap-4">
-            {doc.clauses.map((clause, i) => (
-              <Reveal key={clause.id} delay={Math.min(i * 60, 300)}>
-                <article className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 transition-colors hover:border-[var(--accent)]/30">
+          {/* Identified clause types first, unclassified 'other' last — see
+              sortClausesForDisplay. Two columns on wide screens so the page
+              uses the available width instead of one long single column. */}
+          <section className="mt-8 grid items-start gap-5 lg:grid-cols-2">
+            {orderedClauses.map((clause, i) => (
+              <Reveal key={clause.id} delay={Math.min(i * 45, 270)}>
+                <article className="h-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 transition-colors hover:border-[var(--accent)]/40">
                   <div className="mb-4 flex items-center gap-2">
                     <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--muted)]">
                       Clause {clause.position + 1}
                     </span>
                     <span
-                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-                        CLAUSE_TYPE_TONES[clause.clause_type] ?? CLAUSE_TYPE_TONES.other
-                      }`}
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${toneFor(
+                        clause.clause_type
+                      )}`}
                     >
-                      {CLAUSE_TYPE_LABELS[clause.clause_type] ?? clause.clause_type}
+                      {labelFor(clause.clause_type)}
                     </span>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-4 xl:grid-cols-2">
                     <div>
                       <h3 className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--muted)]">
                         Original
@@ -141,7 +164,7 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
                         {clause.original_text}
                       </p>
                     </div>
-                    <div className="rounded-xl bg-[var(--accent-soft)] p-4">
+                    <div className="rounded-xl border border-[var(--accent-line)] bg-[var(--accent-soft)] p-4">
                       <h3 className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--accent)]">
                         Plain language
                       </h3>
@@ -156,6 +179,21 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
           </section>
         </>
       )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete this document?"
+        body={
+          <>
+            <span className="font-medium text-[var(--foreground)]">{doc.file_name}</span> and its{' '}
+            {doc.clauses.length} clause{doc.clauses.length === 1 ? '' : 's'} will be permanently
+            removed. This cannot be undone.
+          </>
+        }
+        pending={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }

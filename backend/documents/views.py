@@ -128,3 +128,30 @@ class DocumentDetailView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return Document.objects.filter(user=self.request.user)
+
+
+class DocumentDeleteView(generics.DestroyAPIView):
+    """
+    DELETE /api/documents/{id}/
+
+    Lets a user remove a document they no longer want. Clause and Summary
+    rows go with it automatically (both FKs are on_delete=CASCADE), but the
+    uploaded file itself is not — Django stopped auto-deleting FileField
+    files on model delete in 1.3, so perform_destroy() clears it explicitly
+    to avoid orphaning files in MEDIA_ROOT.
+
+    get_queryset() is filtered by user, so one user requesting another
+    user's document id gets a 404 rather than deleting it.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Document.objects.filter(user=self.request.user)
+
+    def perform_destroy(self, instance):
+        stored_file = instance.file
+        instance.delete()
+        if stored_file:
+            # save=False: the row is already gone, so there's nothing to update.
+            stored_file.delete(save=False)

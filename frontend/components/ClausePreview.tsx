@@ -25,7 +25,7 @@ const SAMPLES = [
   },
   {
     type: 'Renewal',
-    tone: 'text-violet-600 dark:text-violet-400 bg-violet-500/10',
+    tone: 'text-cyan-700 dark:text-cyan-400 bg-cyan-500/10',
     original:
       'This agreement shall automatically renew for a further period of one (1) year unless either party gives notice of non-renewal at least sixty (60) days before expiration.',
     summary:
@@ -80,7 +80,7 @@ export default function ClausePreview() {
               {sample.original}
             </p>
           </div>
-          <div className="rounded-xl bg-[var(--accent-soft)] p-3.5">
+          <div className="rounded-xl border border-[var(--accent-line)] bg-[var(--accent-soft)] p-3.5">
             <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--accent)]">
               Plain language
             </p>

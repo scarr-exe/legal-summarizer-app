@@ -3,8 +3,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRequireAuth } from '@/lib/auth-context';
-import { listDocuments, DocumentSummary, ApiError } from '@/lib/api';
+import { listDocuments, deleteDocument, DocumentSummary, ApiError } from '@/lib/api';
 import StatusBadge from '@/components/StatusBadge';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 /** The Chapter 4.2 "Control Centre" — a history list of everything the
  * current user has uploaded, with quick links into each summary view. */
@@ -12,6 +13,8 @@ export default function DashboardPage() {
   const { user, isLoading: authLoading, getValidAccessToken } = useRequireAuth();
   const [documents, setDocuments] = useState<DocumentSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<DocumentSummary | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -27,6 +30,21 @@ export default function DashboardPage() {
   useEffect(() => {
     if (user) load();
   }, [user, load]);
+
+  async function handleDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      const token = await getValidAccessToken();
+      await deleteDocument(pendingDelete.id, token);
+      setDocuments((prev) => prev?.filter((d) => d.id !== pendingDelete.id) ?? null);
+      setPendingDelete(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not delete that document.');
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   if (authLoading || !user) return null;
 
@@ -85,13 +103,16 @@ export default function DashboardPage() {
                 <th className="hidden px-5 py-3 font-medium sm:table-cell">Type</th>
                 <th className="hidden px-5 py-3 font-medium md:table-cell">Uploaded</th>
                 <th className="px-5 py-3 font-medium">Status</th>
+                <th className="px-5 py-3 font-medium">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {documents?.map((doc) => (
                 <tr
                   key={doc.id}
-                  className="border-t border-[var(--border)] transition-colors first:border-t-0 hover:bg-[var(--surface-muted)]"
+                  className="group border-t border-[var(--border)] transition-colors first:border-t-0 hover:bg-[var(--surface-muted)]"
                 >
                   <td className="px-5 py-4">
                     <Link
@@ -114,12 +135,52 @@ export default function DashboardPage() {
                   <td className="px-5 py-4">
                     <StatusBadge status={doc.status} />
                   </td>
+                  <td className="px-5 py-4 text-right">
+                    <button
+                      onClick={() => setPendingDelete(doc)}
+                      aria-label={`Delete ${doc.file_name}`}
+                      title="Delete"
+                      className="rounded-lg p-2 text-[var(--muted)] transition-colors hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        className="h-4 w-4"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete this document?"
+        body={
+          <>
+            <span className="font-medium text-[var(--foreground)]">
+              {pendingDelete?.file_name}
+            </span>{' '}
+            and all of its clauses and summaries will be permanently removed. This cannot be
+            undone.
+          </>
+        }
+        pending={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

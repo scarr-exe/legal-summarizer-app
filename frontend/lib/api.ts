@@ -181,3 +181,15 @@ export async function uploadDocument(file: File, accessToken: string): Promise<D
 export function processDocument(id: string | number, accessToken: string): Promise<DocumentDetail> {
   return authedRequest(`/api/documents/${id}/process/`, accessToken, { method: 'POST' });
 }
+
+export async function deleteDocument(id: string | number, accessToken: string): Promise<void> {
+  // Returns 204 No Content, so there's no body to parse — authedRequest's
+  // parse would just yield {}, but calling fetch directly keeps that explicit.
+  const res = await fetch(`${API_URL}/api/documents/${id}/`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    throw new ApiError(firstErrorMessage(await parseJsonSafe(res)), res.status);
+  }
+}

@@ -164,11 +164,31 @@ Document endpoints, permission scoping (`Document.objects.filter(user=...)`
 everywhere), and structured JSON output were already in place from Phase 3
 and needed no changes.
 
+**Added beyond the plan: `DELETE /api/documents/{id}/`.** The plan lists
+only upload/list/detail/process; there was no way for a user to remove a
+contract once uploaded, which made the dashboard accumulate failed and
+duplicate test uploads with no recourse. `DocumentDeleteView`
+(`generics.DestroyAPIView`) closes that gap. Two details worth noting for
+the report:
+
+- `get_queryset()` is filtered by `user`, so requesting another user's
+  document id returns 404 rather than deleting it — the same ownership
+  pattern used by the other document endpoints.
+- Django stopped auto-deleting `FileField` files on model delete in 1.3,
+  so `perform_destroy()` removes the stored file explicitly. Without it,
+  every delete would orphan a file in `MEDIA_ROOT`. `Clause` and
+  `Summary` rows need no such handling — both FKs are already
+  `on_delete=CASCADE`.
+
+Covered by `documents/tests.py`: successful delete with cascade
+verification, cross-user delete returning 404, and unauthenticated delete
+returning 401.
+
 ---
 
 ## Verification
 
-- `python manage.py test` — 6/6 passing.
+- `python manage.py test` — 9/9 passing.
 - `python manage.py check` — clean.
 - End-to-end manual verification: a real tenancy PDF that previously
   extracted as one word per line, and a real employment DOCX whose

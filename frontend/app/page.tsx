@@ -42,28 +42,21 @@ export default function Home() {
         <div className="pointer-events-none absolute inset-0 -z-10">
           <div className="grid-lines absolute inset-0 h-[560px]" />
           <div
-            className="blob left-[8%] top-[-60px] h-72 w-72"
+            className="blob left-[10%] top-[-80px] h-80 w-80"
             style={{ background: 'var(--accent)' }}
           />
           <div
-            className="blob right-[6%] top-[40px] h-80 w-80"
-            style={{ background: '#a855f7', animationDelay: '3s' }}
+            className="blob right-[8%] top-[20px] h-72 w-72"
+            style={{ background: 'var(--accent)', animationDelay: '4s' }}
           />
         </div>
 
-        <div className="mx-auto max-w-6xl px-6 pb-20 pt-20 sm:pt-28">
+        <div className="mx-auto max-w-6xl px-6 pb-20 pt-24 sm:pt-32">
           <div className="animate-rise mx-auto max-w-3xl text-center">
-            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs text-[var(--muted)]">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Built for contracts people actually sign
-            </span>
-
-            <h1 className="mt-6 text-balance text-4xl font-semibold leading-[1.08] tracking-tight sm:text-6xl">
+            <h1 className="text-balance text-4xl font-semibold leading-[1.08] tracking-tight sm:text-6xl">
               Legal documents,
               <br />
-              <span className="bg-gradient-to-r from-[var(--accent)] to-violet-500 bg-clip-text text-transparent">
-                in language you understand.
-              </span>
+              <span className="text-[var(--muted)]">in language you understand.</span>
             </h1>
 
             <p className="mx-auto mt-6 max-w-xl text-pretty text-lg leading-relaxed text-[var(--muted)]">
