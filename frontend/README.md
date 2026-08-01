@@ -19,8 +19,10 @@ beyond what Phase 0 installed.
 
 ## Phase 5 — Frontend
 
-The plan lists five deliverables, built in order. Four were built as
-described; the fifth is partially blocked (see "Visualization" below).
+The plan lists five deliverables, built in order, plus one item ("search/
+filter across clauses") explicitly marked optional. Four of the five were
+built as described; the fifth (visualization) is partially blocked (see
+below); the optional sixth was added later, once time allowed.
 
 ### 1. Auth pages — built, with one decision the plan left open
 
@@ -106,41 +108,66 @@ them. Added a per-row delete (and one on the document page), both behind
 a confirm dialog. Backed by a new `DELETE /api/documents/{id}/` endpoint
 — see `backend/README.md` for the server-side notes.
 
-### 5. Visualization — PARTIALLY DELIVERED
+### 5. Visualization — both charts now built
 
-The plan asks for **two** charts:
+The plan asks for **two** charts. Both exist, though the second arrived
+later than the first:
 
 1. "a bar or pie chart of clause-type distribution" — **built.**
    `components/ClauseTypeChart.tsx`: a horizontal bar chart with
    per-category colours, value labels, and a summary stat row.
-2. "a timeline bar for contract start/end/renewal dates" — **not built.**
+2. "a timeline bar for contract start/end/renewal dates" — **built,
+   later.** `components/ContractTimeline.tsx`.
 
-**Why the timeline is missing, and what it would take.** It is blocked on
-the backend, not on frontend effort. The plan's Phase 4 describes the
-detail endpoint as returning "clauses + summaries + **derived dates**",
-but no date-extraction step was ever implemented —
-`DocumentDetailSerializer` exposes `id`, `file_name`, `file_type`,
-`upload_date`, `status`, and `clauses`, and nothing else. `upload_date`
-is when the *file was uploaded*, not a contract start/end/renewal date,
-so it cannot stand in.
+**The timeline was blocked on the backend for most of the build**, and is
+worth describing that way in Chapter 5 rather than as a straightforward
+Phase 5 item. The plan's Phase 4 describes the detail endpoint as
+returning "clauses + summaries + **derived dates**", but no date
+extraction existed — the serializer exposed only `upload_date`, which is
+when the *file* was uploaded, not a contract date, so it could not stand
+in. The frontend work was never the hard part. Date extraction was added
+afterwards (`documents/date_extractor.py`; see `backend/README.md` for
+why that module is unusually defensive), which unblocked this.
 
-Building the timeline therefore requires backend work first: extracting
-dates from clause text (spaCy's `DATE` entities over the relevant clause
-types would be the natural approach, since spaCy is already a
-dependency), storing them, and exposing them through the serializer. The
-chart itself is then straightforward.
+Implementation notes:
 
-Worth stating plainly in Chapter 5 rather than glossing over — it is the
-one Phase 5 deliverable that is genuinely incomplete. The clause-type
-distribution chart on its own does still satisfy the plan's own bar for
-this item ("one or two charts are enough to match Chapter 4's design and
-give you demo visuals").
+- **Plain markup, not Recharts.** This is one date range with two or
+  three point markers, which Recharts has no native chart type for.
+  Forcing it into a bar chart would have been more code and less control
+  than positioning markers along a track.
+- **Three degradation steps, because null dates are the normal case.**
+  Extraction is deliberately conservative, so the component handles: a
+  full start→end range (with a renewal marker and a "today" progress
+  indicator when the contract is currently running); a partial result
+  where only some dates were found, rendered as a plain labelled list
+  rather than a bar implying a span that isn't known; and nothing found,
+  rendered as an explanatory empty state that says *which* date formats
+  are detectable rather than just showing a blank chart.
+- **Local date parsing.** `new Date('2026-08-01')` parses as UTC
+  midnight, which renders as 31 July in any timezone behind UTC — an
+  off-by-one-day bug on a component whose entire job is displaying dates.
+  `parseISODate()` splits the parts and uses the local constructor
+  instead.
 
-### Cut, as the plan permits
+### 6. Search/filter across clauses — later addition, now built
 
-**Search/filter across clauses** was flagged in the plan as
-"nice-to-have — implement only if Phase 1–4 finish early." Not
-implemented.
+The plan flags this as "nice-to-have — implement only if Phase 1–4 finish
+early," which is exactly what happened: it was skipped in the initial
+Phase 5 pass and added afterward once the rest of the plan's deliverables
+were stable.
+
+Scoped to within a single document, matching where the plan lists it
+(Phase 5, item 3 — the summary view), rather than across documents or
+across a user's whole history: a search box matches against both
+`original_text` and the plain-language summary (case-insensitive
+substring), and clause-type filter chips are generated from whatever
+types actually appear in that document — a type with zero clauses
+doesn't get a dead chip. Both combine with AND. Entirely client-side
+(`components/ClauseFilters.tsx`); a document's clauses are already fully
+loaded on the page, so this needed no new endpoint. The clause-type
+chart is intentionally unaffected by the filter — it stays a whole-document
+overview rather than re-deriving from a subset, so it doesn't imply the
+distribution changed.
 
 ---
 
@@ -194,11 +221,18 @@ before Phase 7 in the schedule.
 - `npm run build` — production build succeeds, all 7 routes.
 - Delete flow verified live end-to-end against a throwaway account:
   `204` on delete, row removed, repeat delete correctly `404`s.
+- Timeline verified live against a real tenancy contract: reprocessing it
+  through `/process/` populated `start_date 2026-08-01` /
+  `end_date 2027-07-31` / `renewal_date null`, and the component rendered
+  the range with the null renewal correctly omitted.
 
 ## Known outstanding items
 
-- **The timeline visualization** described above — the one incomplete
-  Phase 5 deliverable, blocked on backend date extraction.
+- **All Phase 5 deliverables are now built**, including the timeline that
+  was previously blocked. The remaining caveat is a backend one, not a
+  frontend gap: the timeline only shows dates that were confidently
+  extracted, so contracts phrased in relative terms ("30 days after
+  signing") legitimately render the "no dates detected" state.
 - **4 ESLint errors, all `react-hooks/set-state-in-effect`**, in the
   dashboard, document detail, `Reveal`, and `auth-context`. They come
   from the React Compiler's performance rules and all point at the same

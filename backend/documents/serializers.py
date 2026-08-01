@@ -32,14 +32,20 @@ class DocumentListSerializer(serializers.ModelSerializer):
 
 
 class DocumentDetailSerializer(serializers.ModelSerializer):
-    """Full serializer returned by GET /api/documents/{id}/summary/ (4.4.5)."""
+    """Full serializer returned by GET /api/documents/{id}/summary/ (4.4.5).
+
+    start/end/renewal_date are the "derived dates" from 4.4.5. They are
+    frequently null — see date_extractor.py for why detection is
+    deliberately conservative — so consumers must handle their absence.
+    """
 
     clauses = ClauseSerializer(many=True, read_only=True)
 
     class Meta:
         model = Document
         fields = [
-            'id', 'file_name', 'file_type', 'upload_date', 'status', 'clauses'
+            'id', 'file_name', 'file_type', 'upload_date', 'status',
+            'start_date', 'end_date', 'renewal_date', 'clauses',
         ]
 
 

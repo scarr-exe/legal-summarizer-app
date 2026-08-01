@@ -47,6 +47,14 @@ class Document(models.Model):
         max_length=20, choices=Status.choices, default=Status.UPLOADED
     )
 
+    # Derived contract dates (Chapter 4, Section 4.4.5's "derived dates").
+    # All nullable: extraction is best-effort, and plenty of real contracts
+    # never state these in a machine-parseable way. A null here means "not
+    # confidently detected", never "the contract has no such date".
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    renewal_date = models.DateField(null=True, blank=True)
+
     class Meta:
         ordering = ['-upload_date']
 
@@ -60,6 +68,12 @@ class Clause(models.Model):
         TERMINATION = 'termination', 'Termination'
         CONFIDENTIALITY = 'confidentiality', 'Confidentiality'
         RENEWAL = 'renewal', 'Renewal'
+        # Added late: clause_matcher started emitting 'duration' when that
+        # category was introduced, but this list was never updated to match.
+        # Rows saved fine (Django doesn't enforce choices at the DB level),
+        # so it went unnoticed — but get_clause_type_display() returned the
+        # raw slug and full_clean()/admin would have rejected the value.
+        DURATION = 'duration', 'Duration'
         OTHER = 'other', 'Other'
 
     document = models.ForeignKey(

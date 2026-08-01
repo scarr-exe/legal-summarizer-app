@@ -5,12 +5,23 @@ import { useRouter } from 'next/navigation';
 import { useRequireAuth } from '@/lib/auth-context';
 import { uploadDocument, processDocument, ApiError } from '@/lib/api';
 
-type Stage = 'idle' | 'uploading' | 'processing' | 'error';
+type Stage = 'idle' | 'extracting' | 'identifying' | 'summarizing' | 'error';
 
-const STEPS = [
-  { key: 'uploading', label: 'Extracting text' },
-  { key: 'processing', label: 'Identifying clauses & summarizing' },
-] as const;
+/**
+ * The backend only gives us two real signals: upload() resolving (text
+ * extracted) and process() resolving (clauses identified AND summarized —
+ * one request, no signal in between). Clause matching is fast rule-based
+ * work while summarization is the slow part, so the 'identifying' ->
+ * 'summarizing' transition is a timed estimate against the still-in-flight
+ * process() call, not a separate network event.
+ */
+const IDENTIFY_TO_SUMMARIZE_DELAY_MS = 1400;
+
+const STAGES = [
+  { key: 'extracting', label: 'Extracting text', progress: 18 },
+  { key: 'identifying', label: 'Identifying clauses', progress: 55 },
+  { key: 'summarizing', label: 'Summarizing', progress: 90 },
+] as const satisfies readonly { key: Stage; label: string; progress: number }[];
 
 function formatSize(bytes: number) {
   return bytes < 1024 * 1024
@@ -46,12 +57,15 @@ export default function UploadPage() {
     if (!file) return;
 
     setError(null);
+    let toSummarizing: ReturnType<typeof setTimeout> | undefined;
     try {
-      setStage('uploading');
+      setStage('extracting');
       const token = await getValidAccessToken();
       const uploaded = await uploadDocument(file, token);
 
-      setStage('processing');
+      setStage('identifying');
+      toSummarizing = setTimeout(() => setStage('summarizing'), IDENTIFY_TO_SUMMARIZE_DELAY_MS);
+
       const freshToken = await getValidAccessToken();
       await processDocument(uploaded.id, freshToken);
 
@@ -59,13 +73,15 @@ export default function UploadPage() {
     } catch (err) {
       setStage('error');
       setError(err instanceof ApiError ? err.message : 'Something went wrong during processing.');
+    } finally {
+      clearTimeout(toSummarizing);
     }
   }
 
   if (authLoading || !user) return null;
 
-  const busy = stage === 'uploading' || stage === 'processing';
-  const activeIndex = stage === 'uploading' ? 0 : stage === 'processing' ? 1 : -1;
+  const busy = stage === 'extracting' || stage === 'identifying' || stage === 'summarizing';
+  const current = STAGES.find((s) => s.key === stage);
 
   return (
     <div className="mx-auto max-w-xl px-6 py-16">
@@ -128,33 +144,22 @@ export default function UploadPage() {
             )}
           </label>
 
-          {busy && (
-            <div className="animate-fade flex flex-col gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-              {STEPS.map((step, i) => {
-                const done = activeIndex > i;
-                const active = activeIndex === i;
-                return (
-                  <div key={step.key} className="flex items-center gap-3 text-sm">
-                    <span
-                      className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] transition-colors ${
-                        done
-                          ? 'bg-emerald-500 text-white'
-                          : active
-                            ? 'bg-[var(--accent)] text-white'
-                            : 'bg-[var(--surface-muted)] text-[var(--muted)]'
-                      }`}
-                    >
-                      {done ? '✓' : i + 1}
-                    </span>
-                    <span className={active ? 'font-medium' : 'text-[var(--muted)]'}>
-                      {step.label}
-                    </span>
-                    {active && (
-                      <span className="ml-auto h-1.5 w-1.5 animate-ping rounded-full bg-[var(--accent)]" />
-                    )}
-                  </div>
-                );
-              })}
+          {busy && current && (
+            <div className="animate-fade flex flex-col gap-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+              <div className="flex items-center justify-between text-sm">
+                <span key={stage} className="animate-fade font-medium">
+                  {current.label}
+                </span>
+                <span className="text-xs text-[var(--muted)]">{current.progress}%</span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                <div
+                  className="relative h-full overflow-hidden rounded-full bg-[var(--accent)] transition-[width] duration-700 ease-out"
+                  style={{ width: `${current.progress}%` }}
+                >
+                  <span className="progress-shimmer absolute inset-0" />
+                </div>
+              </div>
             </div>
           )}
 

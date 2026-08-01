@@ -14,6 +14,7 @@ from django.db import transaction
 from .models import Document, Clause, Summary
 from .clause_matcher import identify_clauses
 from .summarizer import summarize_text
+from .date_extractor import extract_contract_dates
 
 
 class ProcessingError(Exception):
@@ -51,6 +52,14 @@ def process_document(document: Document) -> Document:
             )
             summary_text = summarize_text(item['original_text'])
             Summary.objects.create(clause=clause, summary_text=summary_text)
+
+        # Derived contract dates (Chapter 4, 4.4.5). Always reassigned, not
+        # merged, so re-processing can't leave a stale date behind from an
+        # earlier run whose clauses have since been deleted.
+        dates = extract_contract_dates(clause_data)
+        document.start_date = dates['start_date']
+        document.end_date = dates['end_date']
+        document.renewal_date = dates['renewal_date']
 
         document.status = Document.Status.COMPLETE
         document.save()

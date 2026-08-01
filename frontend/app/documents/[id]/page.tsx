@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRequireAuth } from '@/lib/auth-context';
 import { getDocument, deleteDocument, DocumentDetail, ApiError } from '@/lib/api';
-import { labelFor, toneFor, sortClausesForDisplay } from '@/lib/clause-types';
+import { labelFor, toneFor, typePriority, sortClausesForDisplay } from '@/lib/clause-types';
 import StatusBadge from '@/components/StatusBadge';
 import ClauseTypeChart from '@/components/ClauseTypeChart';
+import ContractTimeline from '@/components/ContractTimeline';
+import ClauseFilters from '@/components/ClauseFilters';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import Reveal from '@/components/Reveal';
 
@@ -19,6 +21,8 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
   const [error, setError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [query, setQuery] = useState('');
+  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(() => new Set());
 
   const load = useCallback(async () => {
     setError(null);
@@ -78,6 +82,34 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
 
   const orderedClauses = sortClausesForDisplay(doc.clauses);
 
+  const availableTypes = Object.entries(
+    orderedClauses.reduce<Record<string, number>>((acc, c) => {
+      acc[c.clause_type] = (acc[c.clause_type] ?? 0) + 1;
+      return acc;
+    }, {})
+  )
+    .map(([type, count]) => ({ type, label: labelFor(type), count }))
+    .sort((a, b) => typePriority(a.type) - typePriority(b.type));
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredClauses = orderedClauses.filter((c) => {
+    const matchesType = selectedTypes.size === 0 || selectedTypes.has(c.clause_type);
+    const matchesQuery =
+      normalizedQuery === '' ||
+      c.original_text.toLowerCase().includes(normalizedQuery) ||
+      (c.summary?.summary_text ?? '').toLowerCase().includes(normalizedQuery);
+    return matchesType && matchesQuery;
+  });
+
+  function toggleType(type: string) {
+    setSelectedTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-6 py-10">
       <div className="animate-rise">
@@ -126,20 +158,54 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
         <>
           {doc.clauses.length > 0 && (
             <Reveal className="mt-8">
-              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
-                <h2 className="mb-1 text-sm font-medium uppercase tracking-wider text-[var(--muted)]">
-                  Clause-type distribution
-                </h2>
-                <ClauseTypeChart clauses={doc.clauses} />
+              <div className="grid items-start gap-5 lg:grid-cols-2">
+                <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+                  <h2 className="mb-1 text-sm font-medium uppercase tracking-wider text-[var(--muted)]">
+                    Clause-type distribution
+                  </h2>
+                  <ClauseTypeChart clauses={doc.clauses} />
+                </div>
+
+                <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+                  <h2 className="mb-5 text-sm font-medium uppercase tracking-wider text-[var(--muted)]">
+                    Contract timeline
+                  </h2>
+                  <ContractTimeline
+                    startDate={doc.start_date}
+                    endDate={doc.end_date}
+                    renewalDate={doc.renewal_date}
+                  />
+                </div>
               </div>
             </Reveal>
+          )}
+
+          {orderedClauses.length > 0 && (
+            <Reveal delay={80} className="mt-8">
+              <ClauseFilters
+                query={query}
+                onQueryChange={setQuery}
+                availableTypes={availableTypes}
+                selectedTypes={selectedTypes}
+                onToggleType={toggleType}
+                onClearTypes={() => setSelectedTypes(new Set())}
+                visibleCount={filteredClauses.length}
+                totalCount={orderedClauses.length}
+              />
+            </Reveal>
+          )}
+
+          {orderedClauses.length > 0 && filteredClauses.length === 0 && (
+            <p className="mt-8 rounded-xl border border-dashed border-[var(--border)] px-6 py-10 text-center text-sm text-[var(--muted)]">
+              No clauses match your search or filters.
+            </p>
           )}
 
           {/* Identified clause types first, unclassified 'other' last — see
               sortClausesForDisplay. Two columns on wide screens so the page
               uses the available width instead of one long single column. */}
           <section className="mt-8 grid items-start gap-5 lg:grid-cols-2">
-            {orderedClauses.map((clause, i) => (
+            {filteredClauses.map((clause, i) => (
               <Reveal key={clause.id} delay={Math.min(i * 45, 270)}>
                 <article className="h-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 transition-colors hover:border-[var(--accent)]/40">
                   <div className="mb-4 flex items-center gap-2">
@@ -168,7 +234,13 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
                       <h3 className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--accent)]">
                         Plain language
                       </h3>
-                      <p className="text-sm leading-relaxed">
+                      {/* Same 12.5px size as the original column. Previously
+                          this was text-sm (14px) against the original's
+                          12.5px mono, so a summary could occupy more space
+                          than the clause it summarised even when it had
+                          fewer words. Matching the size lets the length
+                          difference actually read as one. */}
+                      <p className="text-[12.5px] leading-relaxed">
                         {clause.summary?.summary_text ?? '—'}
                       </p>
                     </div>

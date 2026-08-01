@@ -183,6 +183,20 @@ body {
   }
 }
 
+/* Continuous shimmer over an active progress-bar fill, so a long-running
+   stage still reads as "working" rather than stalled. Reuses the sweep
+   keyframe from .shine but loops indefinitely instead of running once. */
+.progress-shimmer {
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgb(255 255 255 / 0.35) 50%,
+    transparent 80%
+  );
+  width: 50%;
+  animation: sweep 1.6s ease-in-out infinite;
+}
+
 .grid-lines {
   background-image:
     linear-gradient(to right, var(--border) 1px, transparent 1px),
@@ -196,7 +210,8 @@ body {
   .animate-fade,
   .animate-dialog,
   .blob,
-  .shine::after {
+  .shine::after,
+  .progress-shimmer {
     animation: none !important;
   }
 

@@ -144,6 +144,13 @@ export interface Clause {
 }
 
 export interface DocumentDetail extends DocumentSummary {
+  /** Derived contract dates, ISO "YYYY-MM-DD". Null whenever extraction
+   * couldn't confidently find one — which is common, since plenty of
+   * contracts don't state dates in a machine-parseable way. Never render
+   * these without handling null. */
+  start_date: string | null;
+  end_date: string | null;
+  renewal_date: string | null;
   clauses: Clause[];
 }
 
