@@ -22,3 +22,6 @@ out/
 # --- Editor / OS ---
 .vscode/
 .DS_Store
+# collectstatic output (generated at build time)
+staticfiles/
+backend/staticfiles/

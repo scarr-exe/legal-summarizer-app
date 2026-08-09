@@ -1,3 +1,14 @@
+# Runtime dependencies for the deployed application.
+#
+# The heavy ML stack (torch + transformers, ~1.1GB installed) is NOT here
+# on purpose -- see requirements-ml.txt. The summarization pipeline's
+# primary path is extractive + rule-based and needs only spaCy; the
+# pretrained model is an optional secondary path that fires on a small
+# minority of clauses and usually loses the near-copy check anyway.
+# Keeping it out of the default install cuts about a gigabyte from the
+# deployed image and avoids a 1.2GB model download on every cold start
+# (container filesystems are ephemeral, so the cache never survives).
+
 # Core framework
 Django==5.0.6
 djangorestframework==3.15.1
@@ -6,6 +17,7 @@ django-cors-headers==4.3.1
 
 # Database
 psycopg2-binary==2.9.9
+dj-database-url==3.1.2
 
 # Document extraction (Chapter 4, Section 4.3.2)
 PyPDF2==3.0.1
@@ -13,13 +25,15 @@ python-docx==1.1.2
 
 # NLP pipeline (Chapter 4, Section 4.3.3)
 spacy==3.7.4
-transformers==4.41.2
-torch==2.3.1
-sentencepiece==0.2.0
+# Pinned as a real dependency rather than left to a manual
+# `python -m spacy download` step, so a fresh deploy can't come up missing
+# the model.
+en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
 
-# Environment / utilities
+# Date extraction for the contract timeline
+python-dateutil==2.9.0.post0
+
+# Environment / utilities / serving
 python-dotenv==1.0.1
 gunicorn==22.0.0
-
-# After installing, run:
-#   python -m spacy download en_core_web_sm
+whitenoise==6.12.0

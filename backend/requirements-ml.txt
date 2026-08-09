@@ -1,0 +1,21 @@
+# Optional: the pretrained neural summarization path.
+#
+# Install on top of requirements.txt to enable the secondary model pass in
+# summarizer.py:
+#
+#   pip install -r requirements.txt -r requirements-ml.txt
+#
+# Not installed in the deployed environment. Without it, get_summarizer()
+# returns None and summarize_text() falls back to the extractive +
+# rule-based output, which is the primary path regardless. Everything the
+# UI shows still works; only the optional long-clause model attempt is
+# skipped.
+#
+# Weight, for context: torch is ~1.0GB installed and the model itself is a
+# further 1.2GB downloaded at first use.
+
+-r requirements.txt
+
+transformers==4.41.2
+torch==2.3.1
+sentencepiece==0.2.0

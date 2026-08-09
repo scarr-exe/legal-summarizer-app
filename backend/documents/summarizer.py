@@ -35,11 +35,10 @@ than it is.
 import math
 import re
 
-from transformers import pipeline
-
 from .clause_matcher import get_nlp
 
 _summarizer = None  # lazy-loaded, see get_summarizer()
+_summarizer_unavailable = False  # set once if transformers/torch aren't installed
 
 # Kept for the rare long clause where genuine compression is worth
 # attempting -- see module docstring for why this is a secondary path,
@@ -81,8 +80,27 @@ _FIGURE_ENT_LABELS = {'MONEY', 'DATE', 'PERCENT', 'CARDINAL', 'QUANTITY'}
 
 
 def get_summarizer():
-    global _summarizer
+    """Loads the pretrained model, or returns None if it isn't available.
+
+    transformers is imported here rather than at module scope so the
+    package (and torch, ~1GB) becomes an *optional* dependency. The
+    neural path is a secondary one that fires on a small minority of
+    clauses and usually loses the near-copy check anyway, so a deployment
+    that omits it still produces correct output via the extractive +
+    rule-based path -- while shedding about a gigabyte of image and a
+    1.2GB model download on every cold start.
+
+    Install the extras (see requirements-ml.txt) to enable it.
+    """
+    global _summarizer, _summarizer_unavailable
+    if _summarizer_unavailable:
+        return None
     if _summarizer is None:
+        try:
+            from transformers import pipeline
+        except ImportError:
+            _summarizer_unavailable = True
+            return None
         _summarizer = pipeline('summarization', model=MODEL_NAME)
     return _summarizer
 
@@ -296,6 +314,9 @@ def summarize_text(text: str, max_length: int = 70, min_length: int = 25) -> str
     truncated = text[:3000]
     try:
         summarizer = get_summarizer()
+        if summarizer is None:
+            # transformers/torch not installed -- the deployed default.
+            return simplified
         result = summarizer(
             truncated,
             max_length=max_length,

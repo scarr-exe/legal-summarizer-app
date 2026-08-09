@@ -159,7 +159,15 @@ stronger than letting an examiner find them.
 
 7. **No password reset flow.** (Plan's own cut.)
 
-8. **Deployment is local/dev-server.** (Plan's own cut.)
+8. **Deployment.** The plan treated a local/dev-server demo as
+   acceptable. The project is now configured for a real deployment
+   (Railway for the Django API + PostgreSQL, Vercel for the Next.js
+   frontend) — see `DEPLOYMENT.md`. Note that the **deployed build
+   omits the optional neural summarization path**: `torch` is ~1.0GB
+   and the model a further 1.2GB re-downloaded on every cold start,
+   for a path that fires on ~3% of clauses and usually loses its
+   quality check. The deterministic extractive + rule-based pipeline
+   is unaffected and is what produces every summary shown.
 
 ---
 

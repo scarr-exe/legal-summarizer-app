@@ -48,6 +48,10 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    # Serves static files in production. Without it the admin loads with no
+    # CSS once DEBUG=False, since Django itself stops serving static then --
+    # and the admin is where the evaluation results are read.
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -89,6 +93,17 @@ DATABASES = {
     }
 }
 
+# Managed hosts (Railway, Render, Heroku) inject a single DATABASE_URL
+# rather than the discrete DB_* variables above. When present it wins, so
+# the same settings file serves local development and deployment.
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    import dj_database_url
+
+    DATABASES['default'] = dj_database_url.parse(
+        DATABASE_URL, conn_max_age=600, ssl_require=False
+    )
+
 # ---------------------------------------------------------------------
 # DRF + SimpleJWT (Chapter 4, Section 4.3.1 — Authentication Subsystem)
 # ---------------------------------------------------------------------
@@ -114,9 +129,41 @@ SIMPLE_JWT = {
 # ---------------------------------------------------------------------
 # CORS — allow the Next.js frontend (adjust port if different)
 # ---------------------------------------------------------------------
-CORS_ALLOWED_ORIGINS = os.environ.get(
-    'CORS_ALLOWED_ORIGINS', 'http://localhost:3000'
-).split(',')
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        'CORS_ALLOWED_ORIGINS', 'http://localhost:3000'
+    ).split(',')
+    if origin.strip()
+]
+
+# ---------------------------------------------------------------------
+# Deployment / HTTPS
+# ---------------------------------------------------------------------
+# Django 4+ requires the admin's origin to be trusted explicitly, or every
+# admin login over HTTPS fails CSRF validation. Defaults to the frontend
+# origins so a single env var usually covers both.
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        'CSRF_TRUSTED_ORIGINS', ','.join(CORS_ALLOWED_ORIGINS)
+    ).split(',')
+    if origin.strip().startswith('http')
+]
+
+if not DEBUG:
+    # Platform proxies terminate TLS and forward this header; without it
+    # Django believes every request is plain HTTP and redirect-loops when
+    # SECURE_SSL_REDIRECT is on.
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    # One year, the value HSTS preload requires. Only meaningful because
+    # the platform serves this domain over HTTPS exclusively.
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 # ---------------------------------------------------------------------
 # File upload limits (Chapter 4, Section 4.4.5 — Input/Output Format)
@@ -147,7 +194,25 @@ USE_TZ = True
 # Static / media
 # ---------------------------------------------------------------------
 STATIC_URL = 'static/'
+# collectstatic target. Required for any deploy — without STATIC_ROOT the
+# build step fails outright.
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    },
+}
+
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'  # uploaded contracts stored here before/while processed
+# Uploaded contracts. NOTE for deployment: on Railway (and most container
+# hosts) this directory is ephemeral and is wiped on every restart or
+# redeploy. That is tolerable here rather than a data-loss bug, because the
+# pipeline reads the file exactly once at upload to extract its text — the
+# extracted text, clauses and summaries all live in Postgres, so a
+# processed document keeps working after its file disappears. Only
+# re-downloading the original would break, which the UI never offers. Move
+# to S3/Cloudinary if that ever changes.
+MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
