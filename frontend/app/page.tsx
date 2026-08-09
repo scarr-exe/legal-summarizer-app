@@ -43,15 +43,15 @@ export default function Home() {
         <div className="ambient absolute inset-0 -z-10" aria-hidden />
         <div className="grid-lines pointer-events-none absolute inset-0 -z-10 h-[620px]" aria-hidden />
 
-        <div className="mx-auto max-w-7xl px-6 pb-24 pt-20 sm:pt-28">
+        <div className="mx-auto max-w-7xl px-5 pb-20 pt-14 sm:px-6 sm:pb-24 sm:pt-28">
           <div className="animate-rise mx-auto max-w-3xl text-center">
-            <h1 className="text-balance text-5xl font-semibold leading-[1.05] tracking-tight sm:text-7xl">
+            <h1 className="text-balance text-[2.5rem] font-semibold leading-[1.08] tracking-tight sm:text-6xl lg:text-7xl">
               Legal documents,
               <br />
               <span className="text-[var(--accent)]">in language you understand.</span>
             </h1>
 
-            <p className="mx-auto mt-7 max-w-xl text-pretty text-lg leading-relaxed text-[var(--muted)]">
+            <p className="mx-auto mt-6 max-w-xl text-pretty text-base leading-relaxed text-[var(--muted)] sm:mt-7 sm:text-lg">
               Upload a tenancy agreement, employment contract, or NDA. Every clause is
               identified, classified, and rewritten in plain English — with the original
               always one glance away.
@@ -86,7 +86,7 @@ export default function Home() {
             )}
           </div>
 
-          <Reveal delay={120} className="mx-auto mt-20 max-w-5xl">
+          <Reveal delay={120} className="mx-auto mt-14 max-w-5xl sm:mt-20">
             <div
               className="card card-glow overflow-hidden"
               style={{ ['--card-glow' as string]: 'rgba(251,191,36,0.16)' }}
@@ -99,7 +99,7 @@ export default function Home() {
 
       {/* ---------------- How it works ---------------- */}
       <section className="border-t border-[var(--border)] bg-[var(--surface-muted)]">
-        <div className="mx-auto max-w-7xl px-6 py-24">
+        <div className="mx-auto max-w-7xl px-5 py-16 sm:px-6 sm:py-24">
           <Reveal>
             <p className="text-sm font-semibold text-[var(--accent)]">How it works</p>
             <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -125,7 +125,7 @@ export default function Home() {
 
       {/* ---------------- Clause types ---------------- */}
       <section className="border-t border-[var(--border)]">
-        <div className="mx-auto max-w-7xl px-6 py-24">
+        <div className="mx-auto max-w-7xl px-5 py-16 sm:px-6 sm:py-24">
           <div className="grid gap-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-center">
             <Reveal>
               <p className="text-sm font-semibold text-[var(--accent)]">
@@ -167,10 +167,10 @@ export default function Home() {
 
       {/* ---------------- Closing CTA ---------------- */}
       <section className="border-t border-[var(--border)] bg-[var(--surface-muted)]">
-        <div className="mx-auto max-w-7xl px-6 py-24">
+        <div className="mx-auto max-w-7xl px-5 py-16 sm:px-6 sm:py-24">
           <Reveal>
             <div
-              className="card card-glow relative overflow-hidden px-8 py-16 text-center"
+              className="card card-glow relative overflow-hidden px-6 py-12 text-center sm:px-8 sm:py-16"
               style={{ ['--card-glow' as string]: 'rgba(251,191,36,0.18)' }}
             >
               <div className="ambient" aria-hidden />
@@ -194,7 +194,7 @@ export default function Home() {
       </section>
 
       <footer className="border-t border-[var(--border)]">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-6 py-10 text-sm text-[var(--muted)] sm:flex-row">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-5 py-10 text-center text-sm text-[var(--muted)] sm:flex-row sm:px-6 sm:text-left">
           <p>Clarity — Legal Document Summarization System</p>
           <p>Final-year project · Iwogbe Uzochukwu</p>
         </div>

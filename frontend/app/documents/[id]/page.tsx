@@ -133,7 +133,7 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
     <div className="relative">
       <div className="ambient" aria-hidden />
 
-      <div className="relative mx-auto max-w-7xl px-6 py-10">
+      <div className="relative mx-auto max-w-7xl px-5 py-8 sm:px-6 sm:py-10">
       <div className="animate-rise">
         <Link
           href="/dashboard"
@@ -143,8 +143,10 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
         </Link>
 
         <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+          <div className="min-w-0 flex-1">
+            {/* break-words, not truncate: a long filename is the page's
+                identity, so wrapping beats hiding it on a narrow screen. */}
+            <h1 className="break-words text-2xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
               {doc.file_name}
             </h1>
             <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[var(--muted)]">
@@ -161,7 +163,7 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
           </div>
           <button
             onClick={() => setConfirmOpen(true)}
-            className="rounded-xl border border-[var(--border)] px-4 py-2 text-sm text-[var(--muted)] transition-colors hover:border-rose-400 hover:text-rose-500"
+            className="shrink-0 rounded-xl border border-[var(--border)] px-4 py-2 text-sm text-[var(--muted)] transition-colors hover:border-rose-400 hover:text-rose-500"
           >
             Delete
           </button>
@@ -187,20 +189,20 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
                     for the clause breakdown, rose for the timeline, so the
                     two are distinguishable at a glance. */}
                 <div
-                  className="card card-glow p-6"
+                  className="card card-glow p-5 sm:p-6"
                   style={{ ['--card-glow' as string]: 'rgba(45,212,191,0.18)' }}
                 >
-                  <h2 className="mb-1 text-xl font-semibold tracking-tight">
+                  <h2 className="mb-1 text-lg font-semibold tracking-tight sm:text-xl">
                     Clause Distribution
                   </h2>
                   <ClauseTypeChart clauses={doc.clauses} />
                 </div>
 
                 <div
-                  className="card card-glow p-6"
+                  className="card card-glow p-5 sm:p-6"
                   style={{ ['--card-glow' as string]: 'rgba(251,113,133,0.18)' }}
                 >
-                  <h2 className="mb-6 text-xl font-semibold tracking-tight">
+                  <h2 className="mb-6 text-lg font-semibold tracking-tight sm:text-xl">
                     Contract Timeline
                   </h2>
                   <ContractTimeline

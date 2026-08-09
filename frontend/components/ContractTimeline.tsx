@@ -138,10 +138,10 @@ export default function ContractTimeline({
   return (
     <div className="flex h-full flex-col justify-center">
       <div className="mb-2 text-center">
-        <span className="text-4xl font-semibold tracking-tight tabular-nums">
+        <span className="text-3xl font-semibold tracking-tight tabular-nums sm:text-4xl">
           {term.value}
         </span>
-        <span className="ml-2 text-2xl text-[var(--muted)]">{term.unit}</span>
+        <span className="ml-2 text-lg text-[var(--muted)] sm:text-2xl">{term.unit}</span>
       </div>
 
       {todayInRange && (

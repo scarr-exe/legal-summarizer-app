@@ -115,7 +115,11 @@ export default function ClauseTypeChart({ clauses }: { clauses: Clause[] }) {
         <div className="w-full flex-1 space-y-3">
           {rows.map((row) => (
             <div key={row.type} className="flex items-center gap-3 text-sm">
-              <span className="w-28 shrink-0 truncate text-[var(--muted)]">{row.label}</span>
+              {/* Narrower label column on phones so the bar itself still has
+                  room to be readable at ~320px. */}
+              <span className="w-[5.5rem] shrink-0 truncate text-xs text-[var(--muted)] sm:w-28 sm:text-sm">
+                {row.label}
+              </span>
               <div className="flex-1">
                 <div
                   className="h-5 rounded-full transition-all duration-700"

@@ -57,17 +57,19 @@ export default function DashboardPage() {
     <div className="relative">
       <div className="ambient" aria-hidden />
 
-      <div className="relative mx-auto max-w-5xl px-6 py-14">
-        <div className="animate-rise mb-10 flex flex-wrap items-end justify-between gap-4">
+      <div className="relative mx-auto max-w-5xl px-5 py-10 sm:px-6 sm:py-14">
+        <div className="animate-rise mb-8 flex flex-wrap items-end justify-between gap-4 sm:mb-10">
           <div>
-            <h1 className="text-4xl font-semibold tracking-tight">Your documents</h1>
-            <p className="mt-2 text-[var(--muted)]">
+            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+              Your documents
+            </h1>
+            <p className="mt-2 text-sm text-[var(--muted)] sm:text-base">
               Every contract you have summarized, newest first.
             </p>
           </div>
           <Link
             href="/upload"
-            className="rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[#1a1200] transition-all hover:opacity-90 active:scale-95"
+            className="w-full rounded-xl bg-[var(--accent)] px-5 py-3 text-center text-sm font-semibold text-[#1a1200] transition-all hover:opacity-90 active:scale-95 sm:w-auto sm:py-2.5"
           >
             Upload document
           </Link>
@@ -108,15 +110,28 @@ export default function DashboardPage() {
             {documents?.map((doc) => (
               <div
                 key={doc.id}
-                className="card group flex items-center gap-4 px-5 py-4 transition-all hover:border-[var(--accent)]/40"
+                className="card group flex items-center gap-3 px-4 py-3.5 transition-all hover:border-[var(--accent)]/40 sm:gap-4 sm:px-5 sm:py-4"
               >
-                <FileTypeIcon fileType={doc.file_type} />
+                <FileTypeIcon fileType={doc.file_type} className="h-8 w-8 shrink-0 sm:h-9 sm:w-9" />
 
+                {/* On phones the filename and its metadata stack, so the name
+                    gets the full row width instead of being squeezed to
+                    "Meri…" by the badge and date sitting beside it. */}
                 <Link
                   href={`/documents/${doc.id}`}
-                  className="min-w-0 flex-1 font-medium transition-colors hover:text-[var(--accent)]"
+                  className="min-w-0 flex-1 transition-colors hover:text-[var(--accent)]"
                 >
-                  <span className="block truncate">{doc.file_name}</span>
+                  <span className="block truncate font-medium">{doc.file_name}</span>
+                  <span className="mt-1 flex items-center gap-2 sm:hidden">
+                    <StatusBadge status={doc.status} />
+                    <span className="text-xs text-[var(--muted)]">
+                      {new Date(doc.upload_date).toLocaleDateString(undefined, {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </span>
                 </Link>
 
                 <span className="hidden whitespace-nowrap text-sm text-[var(--muted)] md:block">
@@ -127,13 +142,15 @@ export default function DashboardPage() {
                   })}
                 </span>
 
-                <StatusBadge status={doc.status} />
+                <span className="hidden sm:block">
+                  <StatusBadge status={doc.status} />
+                </span>
 
                 <button
                   onClick={() => setPendingDelete(doc)}
                   aria-label={`Delete ${doc.file_name}`}
                   title="Delete"
-                  className="rounded-lg p-2 text-[var(--muted)] opacity-60 transition-all hover:bg-rose-500/10 hover:text-rose-500 hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100"
+                  className="shrink-0 rounded-lg p-2 text-[var(--muted)] transition-all hover:bg-rose-500/10 hover:text-rose-500 sm:opacity-60 sm:group-hover:opacity-100"
                 >
                   <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
                     <path

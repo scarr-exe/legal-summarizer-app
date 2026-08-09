@@ -14,7 +14,7 @@ export default function AuthShell({
   footer: React.ReactNode;
 }) {
   return (
-    <div className="relative flex min-h-[calc(100vh-61px)] items-center justify-center px-6 py-16">
+    <div className="relative flex min-h-[calc(100dvh-61px)] items-center justify-center px-5 py-10 sm:px-6 sm:py-16">
       <div className="ambient -z-10" aria-hidden />
 
       <div className="animate-rise w-full max-w-sm">

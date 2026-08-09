@@ -84,9 +84,9 @@ export default function UploadPage() {
   const current = STAGES.find((s) => s.key === stage);
 
   return (
-    <div className="mx-auto max-w-xl px-6 py-16">
+    <div className="mx-auto max-w-xl px-5 py-10 sm:px-6 sm:py-16">
       <div className="animate-rise">
-        <h1 className="text-3xl font-semibold tracking-tight">Upload a contract</h1>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Upload a contract</h1>
         <p className="mt-2 text-[var(--muted)]">
           PDF or DOCX, up to 10MB. Each clause will be identified, classified, and summarized
           in plain English.
