@@ -30,6 +30,17 @@ class EvaluationLog(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        # One rating per person per document. Without this, a participant
+        # who submits twice is counted twice and quietly skews the mean
+        # that Chapter 5 reports. The API upserts rather than erroring
+        # (see EvaluationLogSerializer.create), so re-rating updates the
+        # existing row instead of failing.
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'document'],
+                name='unique_evaluation_per_user_document',
+            )
+        ]
 
     def __str__(self):
         return f'Rating {self.rating}/5 by {self.user} on {self.document}'

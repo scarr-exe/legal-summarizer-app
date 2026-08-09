@@ -5,16 +5,31 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import Logo from './Logo';
 
+/**
+ * Unified from the two redesign mockups, which showed different navbars:
+ * one a floating rounded pill, the other a full-width bar with underlined
+ * tabs. Taking the full-width bar with the underline indicator, because
+ * the underline marks the active route (the pill version had no active
+ * state at all) and a full-width bar aligns with the page gutters.
+ *
+ * Two things from the mockups deliberately dropped:
+ *   - The duplicate "Upload": one mockup had Upload as both a nav tab and
+ *     a primary button in the same bar. Kept as a tab only; the dashboard
+ *     already carries the primary "Upload document" call to action.
+ *   - The username dropdown chevron: it implied a menu whose only item
+ *     would have been Log out, which already sits beside it as a button.
+ */
 export default function NavBar() {
   const { user, isLoading, logout } = useAuth();
   const pathname = usePathname();
 
-  const navLink = (href: string, label: string) => {
-    const active = pathname === href;
+  const tab = (href: string, label: string) => {
+    const active = pathname === href || pathname.startsWith(`${href}/`);
     return (
       <Link
+        key={href}
         href={href}
-        className={`relative rounded-lg px-3 py-1.5 transition-colors ${
+        className={`relative px-1 py-4 text-sm transition-colors ${
           active
             ? 'text-[var(--foreground)]'
             : 'text-[var(--muted)] hover:text-[var(--foreground)]'
@@ -22,42 +37,54 @@ export default function NavBar() {
       >
         {label}
         {active && (
-          <span className="absolute inset-x-3 -bottom-px h-px bg-[var(--accent)]" />
+          <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--accent)]" />
         )}
       </Link>
     );
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--background)]/80 backdrop-blur-xl">
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
-        <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
-          <Logo />
-          <span className="font-semibold tracking-tight">Clarity</span>
+    <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--background)]/85 backdrop-blur-xl">
+      <nav className="mx-auto flex max-w-7xl items-center gap-8 px-6">
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 py-4 transition-opacity hover:opacity-80"
+        >
+          <Logo className="h-7 w-7" />
+          <span className="text-lg font-semibold tracking-tight">Clarity</span>
         </Link>
 
-        <div className="flex items-center gap-1 text-sm">
+        {user && !isLoading && (
+          <div className="flex items-center gap-6">
+            {tab('/dashboard', 'Dashboard')}
+            {tab('/upload', 'Upload')}
+          </div>
+        )}
+
+        <div className="ml-auto flex items-center gap-3 text-sm">
           {isLoading ? (
-            <div className="h-8 w-40 animate-pulse rounded-lg bg-[var(--surface-muted)]" />
+            <div className="h-8 w-36 animate-pulse rounded-lg bg-[var(--surface-muted)]" />
           ) : user ? (
             <>
-              {navLink('/dashboard', 'Dashboard')}
-              {navLink('/upload', 'Upload')}
-              <span className="mx-2 hidden h-4 w-px bg-[var(--border)] sm:block" />
               <span className="hidden text-[var(--muted)] sm:block">{user.username}</span>
               <button
                 onClick={logout}
-                className="ml-2 rounded-lg border border-[var(--border)] px-3 py-1.5 text-[var(--muted)] transition-colors hover:border-[var(--muted)] hover:text-[var(--foreground)]"
+                className="rounded-lg border border-[var(--border)] px-3.5 py-1.5 text-[var(--muted)] transition-colors hover:border-[var(--muted)] hover:text-[var(--foreground)]"
               >
                 Log out
               </button>
             </>
           ) : (
             <>
-              {navLink('/login', 'Log in')}
+              <Link
+                href="/login"
+                className="px-2 py-1.5 text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
+              >
+                Log in
+              </Link>
               <Link
                 href="/register"
-                className="ml-1 rounded-lg bg-[var(--foreground)] px-4 py-1.5 font-medium text-[var(--background)] transition-transform hover:scale-[1.03] active:scale-95"
+                className="rounded-lg bg-[var(--accent)] px-4 py-1.5 font-medium text-[#1a1200] transition-opacity hover:opacity-90"
               >
                 Get started
               </Link>

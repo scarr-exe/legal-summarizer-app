@@ -145,7 +145,7 @@ export default function UploadPage() {
           </label>
 
           {busy && current && (
-            <div className="animate-fade flex flex-col gap-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+            <div className="animate-fade card flex flex-col gap-2.5 p-4">
               <div className="flex items-center justify-between text-sm">
                 <span key={stage} className="animate-fade font-medium">
                   {current.label}
@@ -172,7 +172,7 @@ export default function UploadPage() {
           <button
             type="submit"
             disabled={!file || busy}
-            className="rounded-lg bg-[var(--foreground)] px-4 py-3 text-sm font-medium text-[var(--background)] transition-all hover:opacity-90 disabled:opacity-40"
+            className="rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-[#1a1200] transition-all hover:opacity-90 disabled:opacity-40"
           >
             {busy ? 'Working…' : 'Upload and summarize'}
           </button>

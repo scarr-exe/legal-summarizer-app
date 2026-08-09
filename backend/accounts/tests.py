@@ -164,3 +164,43 @@ class EvaluationLogTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['rating'], 4)
+
+    def test_resubmitting_updates_instead_of_duplicating(self):
+        """A participant changing their mind must not be counted twice —
+        that would silently skew the mean reported in Chapter 5."""
+        self._auth(self.user)
+        first = self.client.post('/api/evaluation-logs/', {
+            'document': self.document.id,
+            'rating': 2,
+            'comments': 'Still confusing.',
+        })
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+
+        second = self.client.post('/api/evaluation-logs/', {
+            'document': self.document.id,
+            'rating': 5,
+            'comments': 'Clearer on a second read.',
+        })
+        self.assertEqual(second.status_code, status.HTTP_201_CREATED)
+
+        self.assertEqual(EvaluationLog.objects.count(), 1)
+        log = EvaluationLog.objects.get()
+        self.assertEqual(log.rating, 5)
+        self.assertEqual(log.comments, 'Clearer on a second read.')
+
+    def test_different_users_can_rate_the_same_document(self):
+        """The uniqueness is per (user, document) — the whole point of the
+        evaluation is several people rating the same summaries."""
+        shared = Document.objects.create(
+            user=self.other, file_name='shared.docx', file_type='docx'
+        )
+        EvaluationLog.objects.create(user=self.other, document=shared, rating=3)
+
+        # Owner of a different document rates their own; both coexist.
+        self._auth(self.user)
+        response = self.client.post('/api/evaluation-logs/', {
+            'document': self.document.id,
+            'rating': 4,
+        })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(EvaluationLog.objects.count(), 2)

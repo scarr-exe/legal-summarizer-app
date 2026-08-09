@@ -1,17 +1,23 @@
 'use client';
 
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Rectangle,
-  LabelList,
-  ResponsiveContainer,
-} from 'recharts';
 import type { Clause } from '@/lib/api';
 import { labelFor, colorFor, typePriority } from '@/lib/clause-types';
+
+/**
+ * Clause-type distribution: a labelled bar list beside a donut.
+ *
+ * The mockup drew the right-hand figure as concentric arcs of differing
+ * radii. That is replaced with a donut here, because concentric arcs
+ * encode value as arc length while each ring has a different
+ * circumference -- so two categories with the same count render at
+ * visibly different lengths, and a larger count on an inner ring can look
+ * smaller than a lesser one on an outer ring. A donut divides a single
+ * circle by angle, so equal counts always look equal.
+ *
+ * Built with plain SVG/CSS rather than Recharts: these are pill bars and
+ * one ring, and hand-rolling them is less code than bending a chart
+ * library's bar renderer into the mockup's shape.
+ */
 
 interface Row {
   type: string;
@@ -32,7 +38,7 @@ function buildRows(clauses: Clause[]): Row[] {
     label: labelFor(type),
     count,
     color: colorFor(type),
-    share: clauses.length ? Math.round((count / clauses.length) * 100) : 0,
+    share: clauses.length ? (count / clauses.length) * 100 : 0,
   })).sort((a, b) => {
     // 'other' always sinks to the bottom; the rest rank by frequency.
     const aOther = typePriority(a.type) >= 99 ? 1 : 0;
@@ -41,86 +47,98 @@ function buildRows(clauses: Clause[]): Row[] {
   });
 }
 
+const RADIUS = 52;
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+
+function Donut({ rows, total }: { rows: Row[]; total: number }) {
+  let offset = 0;
+
+  return (
+    <svg viewBox="0 0 140 140" className="h-full w-full -rotate-90">
+      <circle
+        cx="70"
+        cy="70"
+        r={RADIUS}
+        fill="none"
+        stroke="var(--border)"
+        strokeWidth="14"
+        opacity="0.5"
+      />
+      {rows.map((row) => {
+        const length = (row.count / total) * CIRCUMFERENCE;
+        // 1.5px visual gap between segments, but never so large that a
+        // single-clause segment disappears entirely.
+        const gap = Math.min(1.5, length / 3);
+        const segment = (
+          <circle
+            key={row.type}
+            cx="70"
+            cy="70"
+            r={RADIUS}
+            fill="none"
+            stroke={row.color}
+            strokeWidth="14"
+            strokeLinecap="butt"
+            strokeDasharray={`${Math.max(length - gap, 0.5)} ${CIRCUMFERENCE}`}
+            strokeDashoffset={-offset}
+          >
+            <title>{`${row.label}: ${row.count} (${Math.round(row.share)}%)`}</title>
+          </circle>
+        );
+        offset += length;
+        return segment;
+      })}
+    </svg>
+  );
+}
+
 export default function ClauseTypeChart({ clauses }: { clauses: Clause[] }) {
-  const data = buildRows(clauses);
+  const rows = buildRows(clauses);
+  const total = clauses.length;
   const identified = clauses.filter((c) => c.clause_type !== 'other').length;
+  const max = Math.max(...rows.map((r) => r.count), 1);
+
+  if (!total) {
+    return (
+      <p className="text-sm text-[var(--muted)]">No clauses to chart.</p>
+    );
+  }
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-baseline gap-x-6 gap-y-1">
-        <div>
-          <span className="text-2xl font-semibold tabular-nums">{clauses.length}</span>
-          <span className="ml-1.5 text-sm text-[var(--muted)]">clauses</span>
-        </div>
-        <div>
-          <span className="text-2xl font-semibold tabular-nums">{identified}</span>
-          <span className="ml-1.5 text-sm text-[var(--muted)]">identified by type</span>
-        </div>
-        <div>
-          <span className="text-2xl font-semibold tabular-nums">{data.length}</span>
-          <span className="ml-1.5 text-sm text-[var(--muted)]">
-            {data.length === 1 ? 'category' : 'categories'}
-          </span>
-        </div>
-      </div>
+      <p className="mb-6 text-sm text-[var(--muted)]">
+        {total} clauses · {identified} identified by type · {rows.length}{' '}
+        {rows.length === 1 ? 'category' : 'categories'}
+      </p>
 
-      <div style={{ height: Math.max(data.length * 46 + 16, 120) }} className="w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={data}
-            layout="vertical"
-            margin={{ left: 0, right: 44, top: 0, bottom: 0 }}
-            barCategoryGap={10}
-          >
-            {/* Axes carry no ticks/lines — the value labels on each bar
-                communicate the numbers, so gridlines would be noise. */}
-            <XAxis type="number" hide />
-            <YAxis
-              type="category"
-              dataKey="label"
-              width={124}
-              tick={{ fontSize: 13, fill: 'var(--muted)' }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <Tooltip
-              cursor={{ fill: 'var(--surface-muted)' }}
-              contentStyle={{
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-                borderRadius: 10,
-                fontSize: 13,
-                color: 'var(--foreground)',
-              }}
-              formatter={(value, _name, item) => {
-                const count = Number(value);
-                const share = (item?.payload as Row | undefined)?.share ?? 0;
-                return [`${count} clause${count === 1 ? '' : 's'} · ${share}%`, 'Count'];
-              }}
-            />
-            <Bar
-              dataKey="count"
-              animationDuration={800}
-              barSize={22}
-              // Cell is deprecated in Recharts 3 (removed in 4); per-datum
-              // colour goes through `shape` now.
-              shape={(props) => (
-                <Rectangle
-                  {...props}
-                  radius={[0, 6, 6, 0]}
-                  fill={colorFor((props.payload as Row).type)}
+      <div className="flex flex-col items-center gap-6 sm:flex-row sm:gap-8">
+        <div className="w-full flex-1 space-y-3">
+          {rows.map((row) => (
+            <div key={row.type} className="flex items-center gap-3 text-sm">
+              <span className="w-28 shrink-0 truncate text-[var(--muted)]">{row.label}</span>
+              <div className="flex-1">
+                <div
+                  className="h-5 rounded-full transition-all duration-700"
+                  style={{
+                    width: `${Math.max((row.count / max) * 100, 8)}%`,
+                    backgroundColor: row.color,
+                  }}
                 />
-              )}
-            >
-              <LabelList
-                dataKey="count"
-                position="right"
-                offset={10}
-                style={{ fill: 'var(--muted)', fontSize: 12, fontVariantNumeric: 'tabular-nums' }}
-              />
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+              </div>
+              <span className="w-5 shrink-0 text-right tabular-nums text-[var(--muted)]">
+                {row.count}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="relative h-36 w-36 shrink-0">
+          <Donut rows={rows} total={total} />
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-2xl font-semibold tabular-nums leading-none">{total}</span>
+            <span className="mt-1 text-[11px] text-[var(--muted)]">clauses</span>
+          </div>
+        </div>
       </div>
     </div>
   );

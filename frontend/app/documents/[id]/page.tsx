@@ -4,12 +4,20 @@ import { use, useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRequireAuth } from '@/lib/auth-context';
-import { getDocument, deleteDocument, DocumentDetail, ApiError } from '@/lib/api';
+import {
+  getDocument,
+  deleteDocument,
+  listEvaluations,
+  DocumentDetail,
+  EvaluationLog,
+  ApiError,
+} from '@/lib/api';
 import { labelFor, toneFor, typePriority, sortClausesForDisplay } from '@/lib/clause-types';
 import StatusBadge from '@/components/StatusBadge';
 import ClauseTypeChart from '@/components/ClauseTypeChart';
 import ContractTimeline from '@/components/ContractTimeline';
 import ClauseFilters from '@/components/ClauseFilters';
+import EvaluationWidget from '@/components/EvaluationWidget';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import Reveal from '@/components/Reveal';
 
@@ -23,6 +31,7 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
   const [deleting, setDeleting] = useState(false);
   const [query, setQuery] = useState('');
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(() => new Set());
+  const [evaluation, setEvaluation] = useState<EvaluationLog | null | undefined>(undefined);
 
   const load = useCallback(async () => {
     setError(null);
@@ -30,6 +39,16 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
       const token = await getValidAccessToken();
       const data = await getDocument(id, token);
       setDoc(data);
+
+      // Existing rating for this document, so a return visit shows the
+      // submitted state instead of an empty form. Deliberately not fatal:
+      // failing to load a rating shouldn't block reading the summaries.
+      try {
+        const logs = await listEvaluations(token);
+        setEvaluation(logs.find((log) => String(log.document) === String(id)) ?? null);
+      } catch {
+        setEvaluation(null);
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not load this document.');
     }
@@ -111,7 +130,10 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-10">
+    <div className="relative">
+      <div className="ambient" aria-hidden />
+
+      <div className="relative mx-auto max-w-7xl px-6 py-10">
       <div className="animate-rise">
         <Link
           href="/dashboard"
@@ -121,26 +143,28 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
         </Link>
 
         <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">{doc.file_name}</h1>
-            <p className="mt-1.5 text-sm text-[var(--muted)]">
-              {doc.clauses.length} clauses · uploaded{' '}
-              {new Date(doc.upload_date).toLocaleDateString(undefined, {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })}
-            </p>
+          <div className="min-w-0">
+            <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+              {doc.file_name}
+            </h1>
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[var(--muted)]">
+              <span>
+                {doc.clauses.length} clauses · uploaded{' '}
+                {new Date(doc.upload_date).toLocaleDateString(undefined, {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
+              <StatusBadge status={doc.status} />
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <StatusBadge status={doc.status} />
-            <button
-              onClick={() => setConfirmOpen(true)}
-              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--muted)] transition-colors hover:border-red-400 hover:text-red-600 dark:hover:text-red-400"
-            >
-              Delete
-            </button>
-          </div>
+          <button
+            onClick={() => setConfirmOpen(true)}
+            className="rounded-xl border border-[var(--border)] px-4 py-2 text-sm text-[var(--muted)] transition-colors hover:border-rose-400 hover:text-rose-500"
+          >
+            Delete
+          </button>
         </div>
       </div>
 
@@ -158,17 +182,26 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
         <>
           {doc.clauses.length > 0 && (
             <Reveal className="mt-8">
-              <div className="grid items-start gap-5 lg:grid-cols-2">
-                <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
-                  <h2 className="mb-1 text-sm font-medium uppercase tracking-wider text-[var(--muted)]">
-                    Clause-type distribution
+              <div className="grid items-stretch gap-5 lg:grid-cols-2">
+                {/* Each panel carries a tint matching what it shows: teal
+                    for the clause breakdown, rose for the timeline, so the
+                    two are distinguishable at a glance. */}
+                <div
+                  className="card card-glow p-6"
+                  style={{ ['--card-glow' as string]: 'rgba(45,212,191,0.18)' }}
+                >
+                  <h2 className="mb-1 text-xl font-semibold tracking-tight">
+                    Clause Distribution
                   </h2>
                   <ClauseTypeChart clauses={doc.clauses} />
                 </div>
 
-                <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
-                  <h2 className="mb-5 text-sm font-medium uppercase tracking-wider text-[var(--muted)]">
-                    Contract timeline
+                <div
+                  className="card card-glow p-6"
+                  style={{ ['--card-glow' as string]: 'rgba(251,113,133,0.18)' }}
+                >
+                  <h2 className="mb-6 text-xl font-semibold tracking-tight">
+                    Contract Timeline
                   </h2>
                   <ContractTimeline
                     startDate={doc.start_date}
@@ -207,7 +240,7 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
           <section className="mt-8 grid items-start gap-5 lg:grid-cols-2">
             {filteredClauses.map((clause, i) => (
               <Reveal key={clause.id} delay={Math.min(i * 45, 270)}>
-                <article className="h-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 transition-colors hover:border-[var(--accent)]/40">
+                <article className="card h-full p-5 transition-colors hover:border-[var(--accent)]/40">
                   <div className="mb-4 flex items-center gap-2">
                     <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--muted)]">
                       Clause {clause.position + 1}
@@ -249,6 +282,21 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
               </Reveal>
             ))}
           </section>
+
+          {/* Asked after the summaries, not before — a participant can only
+              judge clarity once they've read them. `undefined` means the
+              existing rating is still loading, so nothing is rendered yet
+              and the form can't flash an empty state over a saved one. */}
+          {evaluation !== undefined && (
+            <Reveal className="mt-8">
+              <EvaluationWidget
+                documentId={doc.id}
+                initialRating={evaluation?.rating ?? null}
+                initialComments={evaluation?.comments ?? ''}
+                getValidAccessToken={getValidAccessToken}
+              />
+            </Reveal>
+          )}
         </>
       )}
 
@@ -266,6 +314,7 @@ export default function DocumentSummaryPage({ params }: { params: Promise<{ id: 
         onConfirm={handleDelete}
         onCancel={() => setConfirmOpen(false)}
       />
+      </div>
     </div>
   );
 }

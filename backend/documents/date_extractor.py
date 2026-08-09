@@ -36,7 +36,7 @@ is not.
 """
 
 import re
-from datetime import date
+from datetime import date, datetime
 
 from dateutil import parser as date_parser
 
@@ -60,6 +60,10 @@ _NUMERIC_DATE_RE = re.compile(r'\b\d{1,4}[/-]\d{1,2}[/-]\d{1,4}\b')
 _MIN_YEAR = 1990
 _MAX_YEAR = 2100
 
+# Fixed anchor supplying any date component the text omits. Must not be
+# "now" -- see _parse_span for why that made output non-deterministic.
+_PARSE_ANCHOR = datetime(2000, 1, 1)
+
 
 def _looks_like_calendar_date(span: str) -> bool:
     """
@@ -80,7 +84,15 @@ def _parse_span(span: str) -> date | None:
     if not _looks_like_calendar_date(span):
         return None
     try:
-        parsed = date_parser.parse(span, fuzzy=True)
+        # The explicit default matters. Without it dateutil fills any
+        # component the span omits from *today's date*, so a month-and-year
+        # span like "August 2026" resolves to today's day-of-month -- and
+        # reprocessing the same contract on a different day would store a
+        # different start date. Anchoring to the 1st makes the result
+        # deterministic, and "commences August 2026" -> 1 August is the
+        # conventional reading anyway. The guard above already guarantees
+        # a real year and month, so the day is the only part ever defaulted.
+        parsed = date_parser.parse(span, fuzzy=True, default=_PARSE_ANCHOR)
     except (ValueError, OverflowError):
         return None
 

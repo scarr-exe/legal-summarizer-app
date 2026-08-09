@@ -94,7 +94,14 @@ class DateSpanParsingTests(TestCase):
         self.assertEqual(_parse_span('1st August 2026'), date(2026, 8, 1))
         self.assertEqual(_parse_span('31st July 2027'), date(2027, 7, 31))
         self.assertEqual(_parse_span('2026-08-01'), date(2026, 8, 1))
+
+    def test_month_year_span_anchors_to_the_first(self):
+        """Regression: dateutil fills a missing day from *today*, so
+        'August 2026' resolved to today's day-of-month and reprocessing the
+        same contract on a different day produced a different date. The
+        parser is now anchored to a fixed date, so the day is always 1."""
         self.assertEqual(_parse_span('August 2026'), date(2026, 8, 1))
+        self.assertEqual(_parse_span('September 2027'), date(2027, 9, 1))
 
     def test_rejects_years_outside_a_sane_window(self):
         self.assertIsNone(_parse_span('12 January 1804'))

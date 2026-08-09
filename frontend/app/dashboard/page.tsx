@@ -5,10 +5,15 @@ import Link from 'next/link';
 import { useRequireAuth } from '@/lib/auth-context';
 import { listDocuments, deleteDocument, DocumentSummary, ApiError } from '@/lib/api';
 import StatusBadge from '@/components/StatusBadge';
+import FileTypeIcon from '@/components/FileTypeIcon';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 /** The Chapter 4.2 "Control Centre" — a history list of everything the
- * current user has uploaded, with quick links into each summary view. */
+ * current user has uploaded, with quick links into each summary view.
+ *
+ * Rebuilt from the redesign mockup: separated card rows rather than a
+ * table, with colour-coded file-type icons carrying the format so the
+ * "Type" column could go. */
 export default function DashboardPage() {
   const { user, isLoading: authLoading, getValidAccessToken } = useRequireAuth();
   const [documents, setDocuments] = useState<DocumentSummary[] | null>(null);
@@ -49,121 +54,102 @@ export default function DashboardPage() {
   if (authLoading || !user) return null;
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-12">
-      <div className="animate-rise mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Your documents</h1>
-          <p className="mt-1.5 text-sm text-[var(--muted)]">
-            Every contract you have summarized, newest first.
-          </p>
-        </div>
-        <Link
-          href="/upload"
-          className="rounded-lg bg-[var(--foreground)] px-4 py-2.5 text-sm font-medium text-[var(--background)] transition-transform hover:scale-[1.03] active:scale-95"
-        >
-          Upload document
-        </Link>
-      </div>
+    <div className="relative">
+      <div className="ambient" aria-hidden />
 
-      {error && (
-        <p className="mb-4 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
-          {error}
-        </p>
-      )}
-
-      {documents === null && !error ? (
-        <div className="space-y-2">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="h-16 animate-pulse rounded-xl bg-[var(--surface-muted)]"
-              style={{ animationDelay: `${i * 120}ms` }}
-            />
-          ))}
-        </div>
-      ) : documents && documents.length === 0 ? (
-        <div className="animate-rise rounded-2xl border border-dashed border-[var(--border)] px-6 py-16 text-center">
-          <p className="font-medium">No documents yet</p>
-          <p className="mx-auto mt-2 max-w-xs text-sm text-[var(--muted)]">
-            Upload your first contract and every clause will be summarized in plain English.
-          </p>
+      <div className="relative mx-auto max-w-5xl px-6 py-14">
+        <div className="animate-rise mb-10 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-4xl font-semibold tracking-tight">Your documents</h1>
+            <p className="mt-2 text-[var(--muted)]">
+              Every contract you have summarized, newest first.
+            </p>
+          </div>
           <Link
             href="/upload"
-            className="mt-6 inline-block rounded-lg bg-[var(--foreground)] px-5 py-2.5 text-sm font-medium text-[var(--background)] transition-transform hover:scale-[1.03]"
+            className="rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[#1a1200] transition-all hover:opacity-90 active:scale-95"
           >
-            Upload a document
+            Upload document
           </Link>
         </div>
-      ) : (
-        <div className="animate-rise overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-[var(--border)] bg-[var(--surface-muted)] text-xs uppercase tracking-wider text-[var(--muted)]">
-              <tr>
-                <th className="px-5 py-3 font-medium">File</th>
-                <th className="hidden px-5 py-3 font-medium sm:table-cell">Type</th>
-                <th className="hidden px-5 py-3 font-medium md:table-cell">Uploaded</th>
-                <th className="px-5 py-3 font-medium">Status</th>
-                <th className="px-5 py-3 font-medium">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {documents?.map((doc) => (
-                <tr
-                  key={doc.id}
-                  className="group border-t border-[var(--border)] transition-colors first:border-t-0 hover:bg-[var(--surface-muted)]"
+
+        {error && (
+          <p className="mb-4 rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-rose-600 dark:text-rose-400">
+            {error}
+          </p>
+        )}
+
+        {documents === null && !error ? (
+          <div className="space-y-3">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="h-[76px] animate-pulse rounded-2xl bg-[var(--surface-muted)]"
+                style={{ animationDelay: `${i * 120}ms` }}
+              />
+            ))}
+          </div>
+        ) : documents && documents.length === 0 ? (
+          <div className="animate-rise rounded-2xl border border-dashed border-[var(--border)] px-6 py-20 text-center">
+            <p className="text-lg font-medium">No documents yet</p>
+            <p className="mx-auto mt-2 max-w-xs text-sm text-[var(--muted)]">
+              Upload your first contract and every clause will be summarized in plain
+              English.
+            </p>
+            <Link
+              href="/upload"
+              className="mt-7 inline-block rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[#1a1200] transition-transform hover:scale-[1.03]"
+            >
+              Upload a document
+            </Link>
+          </div>
+        ) : (
+          <div className="animate-rise space-y-3">
+            {documents?.map((doc) => (
+              <div
+                key={doc.id}
+                className="card group flex items-center gap-4 px-5 py-4 transition-all hover:border-[var(--accent)]/40"
+              >
+                <FileTypeIcon fileType={doc.file_type} />
+
+                <Link
+                  href={`/documents/${doc.id}`}
+                  className="min-w-0 flex-1 font-medium transition-colors hover:text-[var(--accent)]"
                 >
-                  <td className="px-5 py-4">
-                    <Link
-                      href={`/documents/${doc.id}`}
-                      className="font-medium transition-colors hover:text-[var(--accent)]"
-                    >
-                      {doc.file_name}
-                    </Link>
-                  </td>
-                  <td className="hidden px-5 py-4 font-mono text-xs uppercase text-[var(--muted)] sm:table-cell">
-                    {doc.file_type}
-                  </td>
-                  <td className="hidden px-5 py-4 text-[var(--muted)] md:table-cell">
-                    {new Date(doc.upload_date).toLocaleDateString(undefined, {
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric',
-                    })}
-                  </td>
-                  <td className="px-5 py-4">
-                    <StatusBadge status={doc.status} />
-                  </td>
-                  <td className="px-5 py-4 text-right">
-                    <button
-                      onClick={() => setPendingDelete(doc)}
-                      aria-label={`Delete ${doc.file_name}`}
-                      title="Delete"
-                      className="rounded-lg p-2 text-[var(--muted)] transition-colors hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        className="h-4 w-4"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
-                          stroke="currentColor"
-                          strokeWidth="1.6"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                  <span className="block truncate">{doc.file_name}</span>
+                </Link>
+
+                <span className="hidden whitespace-nowrap text-sm text-[var(--muted)] md:block">
+                  {new Date(doc.upload_date).toLocaleDateString(undefined, {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                </span>
+
+                <StatusBadge status={doc.status} />
+
+                <button
+                  onClick={() => setPendingDelete(doc)}
+                  aria-label={`Delete ${doc.file_name}`}
+                  title="Delete"
+                  className="rounded-lg p-2 text-[var(--muted)] opacity-60 transition-all hover:bg-rose-500/10 hover:text-rose-500 hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+                    <path
+                      d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <ConfirmDialog
         open={pendingDelete !== null}

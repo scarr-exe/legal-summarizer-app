@@ -1,34 +1,43 @@
 @import "tailwindcss";
 
-/* Ink & amber.
-   Warm-tinted neutrals (stone, not cool grey) with a single deep amber
-   accent. Chosen over the previous blue/violet scheme because the
-   gradient-purple look reads generic; amber also stays clear of the
-   semantic clause colours (payment green, termination red,
-   confidentiality blue), so the accent never competes with meaning. */
+/* Slate & amber.
+   Cool deep-slate surfaces carrying a single warm amber accent.
+
+   The slate base comes from the redesign mockups, which moved away from
+   the previous warm-stone neutrals. Amber is kept as the brand accent
+   rather than the blue one mockup used, because (a) the other mockup's
+   logo is amber, (b) blue is already spoken for as the Confidentiality
+   clause colour, and a chrome accent that collides with a data colour
+   makes the data colours stop meaning anything. */
 :root {
   --background: #ffffff;
-  --foreground: #1c1917;
+  --foreground: #0f172a;
   --surface: #ffffff;
-  --surface-muted: #faf9f7;
-  --border: #e7e3dd;
-  --muted: #78716c;
+  --surface-muted: #f8fafc;
+  --border: #e2e8f0;
+  --muted: #64748b;
   --accent: #b45309;
-  --accent-soft: #fdf6ec;
-  --accent-line: #e9d9c1;
+  --accent-soft: #fffbeb;
+  --accent-line: #fcd9a4;
+  /* Ambient page glows. Near-invisible in light mode -- the effect is
+     designed for the dark treatment and looks muddy on white. */
+  --glow-a: rgba(180, 83, 9, 0.06);
+  --glow-b: rgba(13, 148, 136, 0.05);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0c0a09;
-    --foreground: #f5f3f0;
-    --surface: #16130f;
-    --surface-muted: #1a1613;
-    --border: #2c2723;
-    --muted: #a8a29e;
-    --accent: #e0a355;
-    --accent-soft: #221a11;
-    --accent-line: #3a2d1d;
+    --background: #0a0e14;
+    --foreground: #f1f5f9;
+    --surface: #121821;
+    --surface-muted: #0e141c;
+    --border: #1f2937;
+    --muted: #94a3b8;
+    --accent: #fbbf24;
+    --accent-soft: #1c1810;
+    --accent-line: #3f3520;
+    --glow-a: rgba(251, 191, 36, 0.10);
+    --glow-b: rgba(45, 212, 191, 0.08);
   }
 }
 
@@ -195,6 +204,44 @@ body {
   );
   width: 50%;
   animation: sweep 1.6s ease-in-out infinite;
+}
+
+/* --- Redesign surfaces ------------------------------------------------ */
+
+/* Standard content card. Kept as one class so every panel picks up the
+   same radius/border/elevation instead of each page re-deriving it. */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  position: relative;
+}
+
+/* Card with a coloured edge glow, per the mockups. The tint comes from
+   --card-glow, set inline per card, so one class serves every accent. */
+.card-glow {
+  box-shadow:
+    0 0 0 1px var(--card-glow, transparent),
+    0 0 34px -14px var(--card-glow, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  .card-glow {
+    box-shadow:
+      0 0 0 1px var(--card-glow, transparent),
+      0 0 46px -12px var(--card-glow, transparent);
+  }
+}
+
+/* Soft ambient wash behind a page. Two offset radial gradients rather
+   than animated blobs -- cheaper, and it doesn't drift under text. */
+.ambient {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 42% at 18% 0%, var(--glow-a), transparent 70%),
+    radial-gradient(52% 38% at 88% 8%, var(--glow-b), transparent 70%);
 }
 
 .grid-lines {

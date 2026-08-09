@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 const SAMPLES = [
   {
     type: 'Payment',
-    tone: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
+    tone: 'text-teal-700 dark:text-teal-300 bg-teal-500/12',
     original:
       'The Tenant shall pay rent of NGN 500,000 per annum, due monthly in advance on the 1st day of each month, and any late payment shall attract a fee of 5% of the outstanding sum.',
     summary:
@@ -17,7 +17,7 @@ const SAMPLES = [
   },
   {
     type: 'Termination',
-    tone: 'text-rose-600 dark:text-rose-400 bg-rose-500/10',
+    tone: 'text-rose-700 dark:text-rose-300 bg-rose-500/12',
     original:
       'Either party may terminate this agreement by giving not less than thirty (30) days written notice of termination, and any material breach may result in immediate termination.',
     summary:
@@ -25,7 +25,7 @@ const SAMPLES = [
   },
   {
     type: 'Renewal',
-    tone: 'text-cyan-700 dark:text-cyan-400 bg-cyan-500/10',
+    tone: 'text-violet-700 dark:text-violet-300 bg-violet-500/12',
     original:
       'This agreement shall automatically renew for a further period of one (1) year unless either party gives notice of non-renewal at least sixty (60) days before expiration.',
     summary:
@@ -44,7 +44,9 @@ export default function ClausePreview() {
   const sample = SAMPLES[index];
 
   return (
-    <div className="shine relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl shadow-black/5 dark:shadow-black/40">
+    // No border/radius here: the landing page wraps this in a .card, and
+    // duplicating them produced a visible double edge.
+    <div className="shine relative overflow-hidden">
       {/* window chrome */}
       <div className="flex items-center gap-2 border-b border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3">
         <span className="h-2.5 w-2.5 rounded-full bg-red-400/70" />

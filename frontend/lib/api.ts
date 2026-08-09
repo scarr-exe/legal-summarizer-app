@@ -137,7 +137,17 @@ export interface ClauseSummary {
 
 export interface Clause {
   id: number;
-  clause_type: 'payment' | 'termination' | 'confidentiality' | 'renewal' | 'other';
+  // 'duration' was missing here for the same reason it was missing from the
+  // backend's ClauseType choices: the classifier started emitting it and
+  // this list was never updated. Nothing broke visibly because the label
+  // and colour helpers both fall back, but the type was lying.
+  clause_type:
+    | 'payment'
+    | 'termination'
+    | 'confidentiality'
+    | 'renewal'
+    | 'duration'
+    | 'other';
   original_text: string;
   position: number;
   summary: ClauseSummary | null;
@@ -199,4 +209,35 @@ export async function deleteDocument(id: string | number, accessToken: string): 
   if (!res.ok) {
     throw new ApiError(firstErrorMessage(await parseJsonSafe(res)), res.status);
   }
+}
+
+/**
+ * Evaluation logs — the usability/comprehension ratings Chapter 5's
+ * evaluation is built from. The backend enforces one per user per
+ * document and upserts on repeat submission, so re-rating updates the
+ * existing row rather than adding a second one.
+ */
+export interface EvaluationLog {
+  id: number;
+  document: number;
+  rating: number;
+  comments: string;
+  created_at: string;
+}
+
+export function listEvaluations(accessToken: string): Promise<EvaluationLog[]> {
+  return authedRequest('/api/evaluation-logs/', accessToken);
+}
+
+export function submitEvaluation(
+  documentId: number,
+  rating: number,
+  comments: string,
+  accessToken: string
+): Promise<EvaluationLog> {
+  return authedRequest('/api/evaluation-logs/', accessToken, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ document: documentId, rating, comments }),
+  });
 }

@@ -30,9 +30,10 @@ export default function ClauseFilters({
   const allActive = selectedTypes.size === 0;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
+    // Single rounded container holding search, chips and the count, per
+    // the mockup — rather than three separate stacked rows.
+    <div className="card flex flex-col gap-4 rounded-2xl px-4 py-3 lg:flex-row lg:items-center lg:gap-5">
+      <div className="relative shrink-0 sm:w-72">
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -66,14 +67,9 @@ export default function ClauseFilters({
               </svg>
             </button>
           )}
-        </div>
-
-        <span className="whitespace-nowrap text-xs text-[var(--muted)] sm:text-right">
-          Showing {visibleCount} of {totalCount}
-        </span>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 lg:flex-1">
         <button
           type="button"
           onClick={onClearTypes}
@@ -103,6 +99,10 @@ export default function ClauseFilters({
           );
         })}
       </div>
+
+      <span className="shrink-0 whitespace-nowrap text-xs text-[var(--muted)]">
+        Showing {visibleCount} of {totalCount}
+      </span>
     </div>
   );
 }

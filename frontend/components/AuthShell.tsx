@@ -15,12 +15,7 @@ export default function AuthShell({
 }) {
   return (
     <div className="relative flex min-h-[calc(100vh-61px)] items-center justify-center px-6 py-16">
-      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div
-          className="blob left-1/2 top-0 h-72 w-72 -translate-x-1/2"
-          style={{ background: 'var(--accent)' }}
-        />
-      </div>
+      <div className="ambient -z-10" aria-hidden />
 
       <div className="animate-rise w-full max-w-sm">
         <div className="mb-8 text-center">
@@ -31,7 +26,10 @@ export default function AuthShell({
           <p className="mt-2 text-sm text-[var(--muted)]">{subtitle}</p>
         </div>
 
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-xl shadow-black/5 dark:shadow-black/30">
+        <div
+          className="card card-glow p-6"
+          style={{ ['--card-glow' as string]: 'rgba(251,191,36,0.14)' }}
+        >
           {children}
         </div>
 

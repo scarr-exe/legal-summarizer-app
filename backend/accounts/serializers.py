@@ -48,6 +48,22 @@ class EvaluationLogSerializer(serializers.ModelSerializer):
         fields = ['id', 'document', 'rating', 'comments', 'created_at']
         read_only_fields = ['id', 'created_at']
 
+    def create(self, validated_data):
+        """Upsert rather than insert.
+
+        The model enforces one rating per user per document, so a second
+        POST for the same document would otherwise fail on the constraint.
+        A participant changing their mind mid-session is normal, and a
+        400 in that situation would read as a broken form — so the
+        existing row is updated instead.
+        """
+        user = validated_data.pop('user')
+        document = validated_data.pop('document')
+        instance, _ = EvaluationLog.objects.update_or_create(
+            user=user, document=document, defaults=validated_data
+        )
+        return instance
+
     def validate_document(self, document):
         """Rejects evaluations against documents the requester doesn't own.
 

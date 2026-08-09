@@ -14,26 +14,30 @@ export const CLAUSE_TYPE_LABELS: Record<string, string> = {
   other: 'Other',
 };
 
-/** Hex values for the chart. Spread around the colour wheel so adjacent
- * bars stay distinguishable, and deliberately clear of the amber UI accent
- * so category colour never reads as "interactive". */
+/** Hex values for the charts. Brightened for the dark slate surfaces the
+ * redesign introduced -- the previous deeper tones muddied against them.
+ *
+ * Duration is orange rather than the mockup's gold on purpose: the brand
+ * accent is amber, and a gold "Duration" chip sitting beside an amber
+ * button makes the reader unsure whether colour here means "category" or
+ * "clickable". Orange keeps the mockup's warm read without that clash. */
 export const CLAUSE_TYPE_COLORS: Record<string, string> = {
-  payment: '#059669',
-  termination: '#e11d48',
-  confidentiality: '#2563eb',
-  renewal: '#0891b2',
-  duration: '#ea580c',
-  other: '#a8a29e',
+  payment: '#2dd4bf',
+  termination: '#fb7185',
+  confidentiality: '#60a5fa',
+  renewal: '#a78bfa',
+  duration: '#f97316',
+  other: '#94a3b8',
 };
 
 /** Tailwind classes for the badges, tinted from the same hues. */
 export const CLAUSE_TYPE_TONES: Record<string, string> = {
-  payment: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
-  termination: 'bg-rose-500/10 text-rose-700 dark:text-rose-400',
-  confidentiality: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
-  renewal: 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-400',
-  duration: 'bg-orange-500/10 text-orange-700 dark:text-orange-400',
-  other: 'bg-stone-500/10 text-stone-600 dark:text-stone-400',
+  payment: 'bg-teal-500/12 text-teal-700 dark:text-teal-300',
+  termination: 'bg-rose-500/12 text-rose-700 dark:text-rose-300',
+  confidentiality: 'bg-blue-500/12 text-blue-700 dark:text-blue-300',
+  renewal: 'bg-violet-500/12 text-violet-700 dark:text-violet-300',
+  duration: 'bg-orange-500/12 text-orange-700 dark:text-orange-300',
+  other: 'bg-slate-500/12 text-slate-600 dark:text-slate-300',
 };
 
 /** Display priority. Everything the classifier actually recognised comes

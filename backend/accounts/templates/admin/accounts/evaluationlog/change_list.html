@@ -1,0 +1,38 @@
+{% extends "admin/change_list.html" %}
+
+{# Summary panel above the evaluation list: response count, mean rating and
+   the score distribution. These are the figures Chapter 5 reports, so they
+   are shown directly rather than tallied by hand from the rows. Respects
+   the current filters, since it is computed from the changelist queryset. #}
+
+{% block result_list %}
+  {% if evaluation_summary %}
+    <div style="margin: 0 0 16px; padding: 14px 18px; border: 1px solid var(--hairline-color, #e0e0e0);
+                border-radius: 8px; background: var(--darkened-bg, #f8f8f8);">
+      <strong style="font-size: 14px;">Evaluation summary</strong>
+      <div style="margin-top: 8px; font-size: 13px;">
+        {% if evaluation_summary.count %}
+          <span><strong>{{ evaluation_summary.count }}</strong> response{{ evaluation_summary.count|pluralize }}</span>
+          &nbsp;·&nbsp;
+          <span>mean rating <strong>{{ evaluation_summary.mean }}</strong> / 5</span>
+          <div style="margin-top: 10px;">
+            {% for score, n in evaluation_summary.distribution %}
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 3px;">
+                <span style="width: 34px;">{{ score }} ★</span>
+                <span style="display: inline-block; height: 10px; border-radius: 5px;
+                             background: #f0b429; width: {{ n }}0px; min-width: {% if n %}6px{% else %}0{% endif %};"></span>
+                <span>{{ n }}</span>
+              </div>
+            {% endfor %}
+          </div>
+          <p style="margin-top: 10px; color: #666;">
+            Reflects the filters currently applied below.
+          </p>
+        {% else %}
+          <span style="color: #666;">No responses collected yet.</span>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}
