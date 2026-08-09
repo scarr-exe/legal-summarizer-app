@@ -102,6 +102,29 @@ gigabyte and will make the push crawl.
    the spaCy model, pinned as a real dependency so it can't be forgotten),
    runs migrations, then starts gunicorn.
 
+### Python version — do not skip this
+
+`backend/.python-version` pins **Python 3.11**, and the build fails
+without it.
+
+Railway's railpack builder defaults to the newest Python (3.13 at time of
+writing). spaCy 3.7.4 publishes no wheels for 3.13, so pip falls back to
+compiling it from source — which means building `thinc` and `blis` too,
+and those fail. The log looks like a spaCy problem but the real line is
+near the top of the build output:
+
+```
+python  │  3.13.14  │  railpack default (3.13)
+```
+
+Upgrading spaCy instead is not a free swap: `en_core_web_sm` 3.7.1 is tied
+to the spaCy 3.7.x line, and every measurement in the project was taken
+against it. Pinning the interpreter to the version used locally (3.11) is
+the correct fix.
+
+Confirm the build log shows `3.11.x`. If Railway ignores the file, set
+`RAILPACK_PYTHON_VERSION=3.11` as a service variable.
+
 ### Create your admin user
 
 Once deployed, open the service's shell (Railway → your service →
@@ -175,6 +198,7 @@ app would have crashed on boot.
 
 | Change | Why |
 |---|---|
+| **Pinned Python 3.11 (`backend/.python-version`)** | **Blocker.** Railway defaults to 3.13, which has no spaCy 3.7.4 wheels, so the build tries to compile spaCy/thinc/blis from source and fails. |
 | **Added `python-dateutil` to `requirements.txt`** | **Blocker.** `date_extractor.py` imports it, but it was never added after being installed locally. Every request would have 500'd on import in production. |
 | **Added `STATIC_ROOT`** | **Blocker.** `collectstatic` fails without it, so the build breaks. |
 | **Added WhiteNoise** | With `DEBUG=False` Django stops serving static files, so the admin would load with no CSS — and the admin is where evaluation data is read. |
@@ -224,6 +248,7 @@ the site once before demoing.
 
 | Symptom | Cause |
 |---|---|
+| Build fails compiling `spacy` / `thinc` / `blis` | Builder used Python 3.13. Check the top of the log for the resolved version; `backend/.python-version` should force 3.11, or set `RAILPACK_PYTHON_VERSION=3.11` |
 | `DisallowedHost` | `DJANGO_ALLOWED_HOSTS` missing the Railway domain |
 | Login works locally, fails deployed | `CORS_ALLOWED_ORIGINS` not set to the real Vercel URL (step 5.3) |
 | Admin login "CSRF verification failed" | `CSRF_TRUSTED_ORIGINS` missing the Railway domain, scheme included |

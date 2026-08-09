@@ -1,5 +1,12 @@
 # Runtime dependencies for the deployed application.
 #
+# PYTHON VERSION: 3.11, pinned in .python-version next to this file.
+# Not optional. spaCy 3.7.4 ships no wheels for Python 3.13, so a builder
+# defaulting to 3.13 (Railway's railpack does) falls back to compiling
+# spacy -> thinc -> blis from source, and that build fails. Upgrading
+# spaCy instead is not a free swap: en_core_web_sm 3.7.1 is pinned to the
+# 3.7.x line, and the whole NLP pipeline was measured against it.
+#
 # The heavy ML stack (torch + transformers, ~1.1GB installed) is NOT here
 # on purpose -- see requirements-ml.txt. The summarization pipeline's
 # primary path is extractive + rule-based and needs only spaCy; the
