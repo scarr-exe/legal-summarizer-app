@@ -85,6 +85,11 @@ gigabyte and will make the push crawl.
    | `DJANGO_ALLOWED_HOSTS` | `<your-app>.up.railway.app` |
    | `CORS_ALLOWED_ORIGINS` | `https://<your-app>.vercel.app` |
    | `CSRF_TRUSTED_ORIGINS` | `https://<your-app>.up.railway.app,https://<your-app>.vercel.app` |
+
+   Include the `https://` on the origin variables. Pasting the bare
+   domain is the natural mistake — settings.py now adds the scheme
+   automatically if it's missing, but write it in full anyway so the
+   value means exactly what it says.
    | `DATABASE_URL` | reference the Postgres service's variable |
    | `MAX_UPLOAD_SIZE_MB` | `10` |
 
@@ -249,6 +254,7 @@ the site once before demoing.
 | Symptom | Cause |
 |---|---|
 | Build fails compiling `spacy` / `thinc` / `blis` | Builder used Python 3.13. Check the top of the log for the resolved version; `backend/.python-version` should force 3.11, or set `RAILPACK_PYTHON_VERSION=3.11` |
+| Container crash-loops on `corsheaders.E013 … missing scheme or netloc` | An origin variable was set to a bare domain. Handled automatically now, but the value should read `https://your-app.vercel.app` |
 | `DisallowedHost` | `DJANGO_ALLOWED_HOSTS` missing the Railway domain |
 | Login works locally, fails deployed | `CORS_ALLOWED_ORIGINS` not set to the real Vercel URL (step 5.3) |
 | Admin login "CSRF verification failed" | `CSRF_TRUSTED_ORIGINS` missing the Railway domain, scheme included |

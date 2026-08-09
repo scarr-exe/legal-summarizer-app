@@ -129,13 +129,36 @@ SIMPLE_JWT = {
 # ---------------------------------------------------------------------
 # CORS — allow the Next.js frontend (adjust port if different)
 # ---------------------------------------------------------------------
-CORS_ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in os.environ.get(
-        'CORS_ALLOWED_ORIGINS', 'http://localhost:3000'
-    ).split(',')
-    if origin.strip()
-]
+def _parse_origins(raw: str) -> list[str]:
+    """Splits a comma-separated origin list and guarantees each has a scheme.
+
+    Both CORS_ALLOWED_ORIGINS and CSRF_TRUSTED_ORIGINS require a full
+    origin ('https://example.com'), not a bare hostname — but pasting the
+    bare domain from a hosting dashboard is the natural mistake, and the
+    two settings punish it differently: django-cors-headers raises
+    E013 and the container crash-loops, while Django's CSRF list just
+    ignores the entry, so admin login fails later with an unrelated-looking
+    CSRF error.
+
+    A bare hostname is never valid in either setting, so adding the scheme
+    is a correction rather than a guess. Local addresses get http://,
+    everything else https://.
+    """
+    origins = []
+    for candidate in raw.split(','):
+        origin = candidate.strip().rstrip('/')
+        if not origin:
+            continue
+        if '://' not in origin:
+            local = origin.startswith(('localhost', '127.0.0.1', '[::1]'))
+            origin = ('http://' if local else 'https://') + origin
+        origins.append(origin)
+    return origins
+
+
+CORS_ALLOWED_ORIGINS = _parse_origins(
+    os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000')
+)
 
 # ---------------------------------------------------------------------
 # Deployment / HTTPS
@@ -143,13 +166,9 @@ CORS_ALLOWED_ORIGINS = [
 # Django 4+ requires the admin's origin to be trusted explicitly, or every
 # admin login over HTTPS fails CSRF validation. Defaults to the frontend
 # origins so a single env var usually covers both.
-CSRF_TRUSTED_ORIGINS = [
-    origin.strip()
-    for origin in os.environ.get(
-        'CSRF_TRUSTED_ORIGINS', ','.join(CORS_ALLOWED_ORIGINS)
-    ).split(',')
-    if origin.strip().startswith('http')
-]
+CSRF_TRUSTED_ORIGINS = _parse_origins(
+    os.environ.get('CSRF_TRUSTED_ORIGINS', ','.join(CORS_ALLOWED_ORIGINS))
+)
 
 if not DEBUG:
     # Platform proxies terminate TLS and forward this header; without it
